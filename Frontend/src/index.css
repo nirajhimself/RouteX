@@ -1,0 +1,379 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    @apply bg-dark-900 text-slate-100 antialiased;
+  }
+  .light body,
+  body.light {
+    background-color: #f0f2f8;
+    color: #1a2035;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a3a52;
+    border-radius: 99px;
+  }
+  .light ::-webkit-scrollbar-thumb {
+    background: #c8d0e4;
+  }
+}
+
+@layer components {
+  /* ── Cards ─────────────────────────────────────────────── */
+  .card {
+    @apply bg-dark-800 border border-dark-500 rounded-2xl;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  .light .card {
+    background: #ffffff;
+    border: 1px solid #e4e9f2;
+    border-radius: 1rem;
+    box-shadow:
+      0 2px 8px rgba(17, 24, 60, 0.06),
+      0 0 1px rgba(17, 24, 60, 0.08);
+    transition:
+      box-shadow 0.2s,
+      transform 0.2s;
+  }
+  .light .card:hover {
+    box-shadow:
+      0 8px 24px rgba(17, 24, 60, 0.1),
+      0 0 1px rgba(17, 24, 60, 0.08);
+  }
+
+  /* ── Stat card ──────────────────────────────────────────── */
+  .stat-card {
+    @apply card p-5 relative overflow-hidden cursor-default
+           transition-all duration-200 hover:-translate-y-0.5;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-brand-red hover:bg-brand-red-dark
+           text-white text-sm font-semibold rounded-xl transition-all duration-150
+           hover:shadow-red-glow active:scale-95;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-2
+           text-slate-400 hover:text-slate-100 hover:bg-dark-600
+           border border-dark-400 text-sm font-medium rounded-xl transition-all duration-150;
+  }
+  .light .btn-ghost {
+    color: #5a6a8a;
+    background: #ffffff;
+    border: 1px solid #d0d7e8;
+    border-radius: 0.75rem;
+  }
+  .light .btn-ghost:hover {
+    color: #1a2035;
+    background: #f5f7fd;
+    border-color: #b0bcd4;
+  }
+
+  /* ── Inputs ─────────────────────────────────────────────── */
+  .input {
+    @apply w-full px-3 py-2.5 bg-dark-700 border border-dark-400 rounded-xl
+           text-sm text-slate-100 placeholder-slate-500
+           focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/10
+           transition-colors duration-150;
+  }
+  .light .input {
+    background: #f5f7fd;
+    border: 1px solid #d0d7e8;
+    color: #1a2035;
+    border-radius: 0.75rem;
+  }
+  .light .input::placeholder {
+    color: #b0bcd4;
+  }
+  .light .input:focus {
+    background: #ffffff;
+    border-color: #e8001d;
+    box-shadow: 0 0 0 3px rgba(232, 0, 29, 0.08);
+  }
+
+  .select {
+    @apply w-full px-3 py-2.5 bg-dark-700 border border-dark-400 rounded-xl
+           text-sm text-slate-100 appearance-none cursor-pointer
+           focus:outline-none focus:border-brand-red transition-colors;
+  }
+  .light .select {
+    background: #f5f7fd;
+    border: 1px solid #d0d7e8;
+    color: #1a2035;
+    border-radius: 0.75rem;
+  }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-widest mb-1.5;
+    color: #64748b;
+  }
+  .light .label {
+    color: #8896b3;
+  }
+
+  /* ── Badges ─────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-lg
+           text-xs font-semibold font-mono tracking-wide;
+  }
+  .badge-green {
+    @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+  }
+  .badge-yellow {
+    @apply bg-amber-500/10   text-amber-400   border border-amber-500/20;
+  }
+  .badge-red {
+    @apply bg-red-500/10     text-red-400     border border-red-500/20;
+  }
+  .badge-blue {
+    @apply bg-blue-500/10   text-blue-400    border border-blue-500/20;
+  }
+  .badge-gray {
+    @apply bg-slate-500/10  text-slate-400   border border-slate-500/20;
+  }
+
+  .light .badge-green {
+    background: #edfaf4;
+    color: #0f9158;
+    border: 1px solid #b6edcf;
+  }
+  .light .badge-yellow {
+    background: #fff8e6;
+    color: #b07a00;
+    border: 1px solid #fde9a0;
+  }
+  .light .badge-red {
+    background: #fff0f0;
+    color: #c8001a;
+    border: 1px solid #ffc7c7;
+  }
+  .light .badge-blue {
+    background: #eef4ff;
+    color: #2055d4;
+    border: 1px solid #c0d3fa;
+  }
+  .light .badge-gray {
+    background: #f1f4fb;
+    color: #5a6a8a;
+    border: 1px solid #d0d7e8;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-slate-400 hover:text-slate-100 hover:bg-dark-600
+           transition-all duration-150 cursor-pointer relative;
+  }
+  .sidebar-link.active {
+    @apply bg-brand-red/10 text-brand-red border border-brand-red/20;
+  }
+  .sidebar-link.active::before {
+    content: "";
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-red rounded-r;
+  }
+  .light .sidebar-link {
+    color: #5a6a8a;
+  }
+  .light .sidebar-link:hover {
+    color: #1a2035;
+    background: #f0f2f8;
+  }
+  .light .sidebar-link.active {
+    background: linear-gradient(135deg, #fff0f0, #fff5f5);
+    color: #e8001d;
+    border: 1px solid #ffd6d6;
+    font-weight: 600;
+  }
+
+  /* ── Page layout ────────────────────────────────────────── */
+  .page-header {
+    @apply flex items-end justify-between mb-6;
+  }
+  .section-title {
+    font-family: "Syne", sans-serif;
+    @apply text-xl font-bold text-slate-100 tracking-tight;
+  }
+  .light .section-title {
+    color: #1a2035;
+  }
+  .section-sub {
+    @apply text-xs text-slate-500 mt-0.5 font-mono;
+  }
+  .light .section-sub {
+    color: #8896b3;
+  }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  .light table thead tr {
+    background: #f5f7fd;
+  }
+  .light table tbody tr {
+    border-color: #f0f2f8;
+  }
+  .light table tbody tr:hover {
+    background: #f8fafd;
+  }
+  .light table th {
+    color: #8896b3;
+    border-color: #e4e9f2;
+  }
+  .light table td {
+    color: #3a4a6b;
+    border-color: #f0f2f8;
+  }
+
+  /* ── Dark surface overrides in light mode ───────────────── */
+  .light .bg-dark-900 {
+    background-color: #f0f2f8 !important;
+  }
+  .light .bg-dark-800 {
+    background-color: #ffffff !important;
+  }
+  .light .bg-dark-700 {
+    background-color: #f5f7fd !important;
+  }
+  .light .bg-dark-600 {
+    background-color: #f0f2f8 !important;
+  }
+  .light .border-dark-700 {
+    border-color: #f0f2f8 !important;
+  }
+  .light .border-dark-600 {
+    border-color: #e4e9f2 !important;
+  }
+  .light .border-dark-500 {
+    border-color: #e4e9f2 !important;
+  }
+  .light .border-dark-400 {
+    border-color: #d0d7e8 !important;
+  }
+
+  /* ── Text overrides ─────────────────────────────────────── */
+  .light .text-slate-100 {
+    color: #1a2035 !important;
+  }
+  .light .text-slate-200 {
+    color: #2a3a5a !important;
+  }
+  .light .text-slate-300 {
+    color: #3a4a6b !important;
+  }
+  .light .text-slate-400 {
+    color: #5a6a8a !important;
+  }
+  .light .text-slate-500 {
+    color: #8896b3 !important;
+  }
+  .light .text-slate-600 {
+    color: #8896b3 !important;
+  }
+
+  /* ── Stat card helpers ──────────────────────────────────── */
+  .stat-value {
+    text-shadow: 0 0 24px currentColor;
+  }
+  .light .stat-value {
+    text-shadow: none;
+  }
+  .stat-title {
+    color: #64748b;
+  }
+  .light .stat-title {
+    color: #5a6a8a;
+    font-weight: 600;
+  }
+  .stat-sub {
+    color: #475569;
+    font-size: 10px;
+  }
+  .light .stat-sub {
+    color: #8896b3;
+  }
+  .light .glow-blob {
+    display: none !important;
+  }
+
+  /* ── Modal ──────────────────────────────────────────────── */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50
+           flex items-center justify-center p-4;
+  }
+  .light .modal-backdrop {
+    background: rgba(17, 24, 60, 0.35);
+  }
+}
+
+/* ── Map ─────────────────────────────────────────────────────── */
+.leaflet-container {
+  background: #0c1018 !important;
+  font-family: "Inter", sans-serif !important;
+}
+.light .leaflet-container {
+  background: #e8edf5 !important;
+}
+.leaflet-tile {
+  filter: brightness(0.7) saturate(0.6);
+}
+.light .leaflet-tile {
+  filter: none;
+}
+
+/* ── Animations ──────────────────────────────────────────────── */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker-track {
+  animation: ticker 40s linear infinite;
+}
+
+@keyframes markerPing {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+.marker-ping {
+  animation: markerPing 2s ease-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
