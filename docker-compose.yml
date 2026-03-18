@@ -1,14 +1,60 @@
-version: "3"
-
 services:
+  db:
+    image: postgres:15
+    container_name: routex-db
+    restart: always
+    environment:
+      POSTGRES_DB: RouteX_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Ajfdjk
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d RouteX_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./Backend
+    container_name: routex-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:Aashvi2018@db:5432/RouteX_db
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
-  frontend:
+  admin:
     build: ./Frontend
+    container_name: routex-admin
+    restart: always
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend
+
+  driver:
+    build: ./driver-app
+    container_name: routex-driver
+    restart: always
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  customer:
+    build: ./customer-app
+    container_name: routex-customer
+    restart: always
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

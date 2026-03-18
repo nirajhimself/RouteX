@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../api/api";
 import { COMPANY_ID } from "../config";
@@ -10,14 +10,50 @@ import {
   MagnifyingGlassIcon,
   TruckIcon,
   PrinterIcon,
+  ChevronDownIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 
-// ─── QR Code ──────────────────────────────────────────────────────────────────
+// ─── Status config ─────────────────────────────────────────────────────────────
+const STATUSES = [
+  { label: "Booked", color: "#60a5fa", bg: "#60a5fa12", border: "#60a5fa25" },
+  {
+    label: "In Transit",
+    color: "#fbbf24",
+    bg: "#fbbf2412",
+    border: "#fbbf2425",
+  },
+  {
+    label: "Out for Delivery",
+    color: "#f97316",
+    bg: "#f9731612",
+    border: "#f9731625",
+  },
+  {
+    label: "Delivered",
+    color: "#4ade80",
+    bg: "#4ade8012",
+    border: "#4ade8025",
+  },
+  {
+    label: "Cancelled",
+    color: "#f87171",
+    bg: "#f8717112",
+    border: "#f8717125",
+  },
+];
+const STATUS_MAP = Object.fromEntries(STATUSES.map((s) => [s.label, s]));
+const CARRIER_COLORS = {
+  Delhivery: "#60a5fa",
+  DTDC: "#f97316",
+  DHL: "#fbbf24",
+};
+
+// ─── QR Code ───────────────────────────────────────────────────────────────────
 function QRCode({ value, size = 140 }) {
-  const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=0d1117&color=ffffff&margin=10`;
   return (
     <img
-      src={url}
+      src={`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=0d1117&color=ffffff&margin=10`}
       alt="QR"
       width={size}
       height={size}
@@ -26,75 +62,139 @@ function QRCode({ value, size = 140 }) {
   );
 }
 
-// ─── Carrier colors ───────────────────────────────────────────────────────────
-const CARRIER_COLORS = {
-  Delhivery: "#60a5fa",
-  DTDC: "#f97316",
-  DHL: "#fbbf24",
-};
-const STATUS_COLORS = {
-  Booked: { text: "#60a5fa", bg: "#60a5fa12", border: "#60a5fa25" },
-  "In Transit": { text: "#fbbf24", bg: "#fbbf2412", border: "#fbbf2425" },
-  Delivered: { text: "#4ade80", bg: "#4ade8012", border: "#4ade8025" },
-  Cancelled: { text: "#f87171", bg: "#f8717112", border: "#f8717125" },
-};
+// ─── Inline Status Dropdown ────────────────────────────────────────────────────
+function StatusDropdown({ booking, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const ref = useRef(null);
+  const sc = STATUS_MAP[booking.status] || STATUSES[0];
 
-// ─── Booking detail modal ─────────────────────────────────────────────────────
-function BookingModal({ booking, onClose, onCancel }) {
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSelect = async (status) => {
+    if (status === booking.status) {
+      setOpen(false);
+      return;
+    }
+    setSaving(true);
+    setOpen(false);
+    try {
+      await api.patch(`/booking/${booking.id}/status`, { status });
+      onUpdate(booking.id, status);
+    } catch {
+      alert("Failed to update status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentIdx = STATUSES.findIndex((x) => x.label === booking.status);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={
+          saving ||
+          booking.status === "Delivered" ||
+          booking.status === "Cancelled"
+        }
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold
+                   transition-all hover:opacity-80 disabled:opacity-60 disabled:cursor-default min-w-[130px] justify-between"
+        style={{
+          color: sc.color,
+          background: sc.bg,
+          border: `1px solid ${sc.border}`,
+        }}
+      >
+        <span>{saving ? "Saving…" : booking.status}</span>
+        {!saving &&
+          booking.status !== "Delivered" &&
+          booking.status !== "Cancelled" && (
+            <ChevronDownIcon
+              className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className="absolute top-full left-0 mt-1 z-50 bg-dark-800 border border-dark-500 rounded-xl shadow-2xl overflow-hidden"
+            style={{ minWidth: 168 }}
+          >
+            {STATUSES.map((s, idx) => {
+              const isCurrent = s.label === booking.status;
+              const isBackward = s.label !== "Cancelled" && idx < currentIdx;
+              return (
+                <button
+                  key={s.label}
+                  onClick={() => !isBackward && handleSelect(s.label)}
+                  disabled={isBackward}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs transition-all
+                    ${isBackward ? "opacity-25 cursor-not-allowed" : "hover:bg-dark-600 cursor-pointer"}
+                    ${isCurrent ? "bg-dark-700" : ""}`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: s.color }}
+                  />
+                  <span
+                    className="flex-1 font-medium"
+                    style={{ color: isCurrent ? s.color : "#94a3b8" }}
+                  >
+                    {s.label}
+                  </span>
+                  {isCurrent && (
+                    <CheckIcon className="w-3 h-3" style={{ color: s.color }} />
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Booking detail modal ──────────────────────────────────────────────────────
+function BookingModal({ booking, onClose, onUpdate }) {
   const [cancelling, setCancelling] = useState(false);
   const cc = CARRIER_COLORS[booking.carrier] || "#e8001d";
-  const sc = STATUS_COLORS[booking.status] || STATUS_COLORS["Booked"];
 
   const handlePrint = () => {
     const win = window.open("", "_blank");
-    win.document.write(`
-      <html><head><title>Shipping Label - ${booking.tracking_number}</title>
-      <style>
-        body { font-family: monospace; padding: 20px; background: #fff; color: #000; }
-        .label { border: 2px solid #000; padding: 20px; max-width: 400px; margin: 0 auto; }
-        h2 { font-size: 24px; margin: 0 0 10px; }
-        .tracking { font-size: 20px; font-weight: bold; letter-spacing: 2px; border: 1px solid #000; padding: 8px; text-align: center; margin: 12px 0; }
-        .section { margin: 10px 0; }
-        .label-sm { font-size: 10px; color: #666; text-transform: uppercase; }
-        .value { font-size: 13px; font-weight: bold; }
-        img { display: block; margin: 10px auto; }
-        .divider { border-top: 1px dashed #000; margin: 12px 0; }
-      </style></head>
-      <body>
-        <div class="label">
-          <h2>RouteX Logistics</h2>
-          <div class="tracking">${booking.tracking_number}</div>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${booking.tracking_number}&bgcolor=ffffff&color=000000&margin=5" />
-          <div class="divider"></div>
-          <div class="section">
-            <div class="label-sm">FROM</div>
-            <div class="value">${booking.sender_name || "—"}</div>
-            <div>${booking.sender_address || ""}, ${booking.sender_city || ""} - ${booking.sender_pincode || ""}</div>
-          </div>
-          <div class="divider"></div>
-          <div class="section">
-            <div class="label-sm">TO</div>
-            <div class="value">${booking.receiver_name}</div>
-            <div>${booking.receiver_address}, ${booking.receiver_city} - ${booking.receiver_pincode}</div>
-            <div>📞 ${booking.receiver_phone || "—"}</div>
-          </div>
-          <div class="divider"></div>
-          <div class="section">
-            <div class="label-sm">Carrier</div>
-            <div class="value">${booking.carrier} · ${booking.service_type}</div>
-          </div>
-          <div class="section">
-            <div class="label-sm">Product</div>
-            <div class="value">${booking.product_name || "—"} · ${booking.weight_kg} kg</div>
-          </div>
-          <div class="section">
-            <div class="label-sm">Declared Value</div>
-            <div class="value">₹${booking.declared_value?.toLocaleString() || "—"}</div>
-          </div>
-        </div>
-        <script>window.onload=()=>window.print();</script>
-      </body></html>
-    `);
+    win.document
+      .write(`<html><head><title>Label - ${booking.tracking_number}</title>
+      <style>body{font-family:monospace;padding:20px;background:#fff;color:#000}.label{border:2px solid #000;padding:20px;max-width:400px;margin:0 auto}
+      h2{font-size:24px;margin:0 0 10px}.tracking{font-size:20px;font-weight:bold;letter-spacing:2px;border:1px solid #000;padding:8px;text-align:center;margin:12px 0}
+      .section{margin:10px 0}.label-sm{font-size:10px;color:#666;text-transform:uppercase}.value{font-size:13px;font-weight:bold}
+      img{display:block;margin:10px auto}.divider{border-top:1px dashed #000;margin:12px 0}</style></head>
+      <body><div class="label"><h2>RouteX Logistics</h2><div class="tracking">${booking.tracking_number}</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${booking.tracking_number}&bgcolor=ffffff&color=000000&margin=5"/>
+      <div class="divider"></div>
+      <div class="section"><div class="label-sm">FROM</div><div class="value">${booking.sender_name || "—"}</div>
+      <div>${booking.sender_address || ""}, ${booking.sender_city || ""} - ${booking.sender_pincode || ""}</div></div>
+      <div class="divider"></div>
+      <div class="section"><div class="label-sm">TO</div><div class="value">${booking.receiver_name}</div>
+      <div>${booking.receiver_address}, ${booking.receiver_city} - ${booking.receiver_pincode}</div>
+      <div>📞 ${booking.receiver_phone || "—"}</div></div>
+      <div class="divider"></div>
+      <div class="section"><div class="label-sm">Carrier</div><div class="value">${booking.carrier} · ${booking.service_type}</div></div>
+      <div class="section"><div class="label-sm">Product</div><div class="value">${booking.product_name || "—"} · ${booking.weight_kg} kg</div></div>
+      <div class="section"><div class="label-sm">Status</div><div class="value">${booking.status}</div></div>
+      </div><script>window.onload=()=>window.print();</script></body></html>`);
     win.document.close();
   };
 
@@ -102,10 +202,10 @@ function BookingModal({ booking, onClose, onCancel }) {
     setCancelling(true);
     try {
       await api.patch(`/booking/${booking.id}/status`, { status: "Cancelled" });
-      onCancel(booking.id);
+      onUpdate(booking.id, "Cancelled");
       onClose();
     } catch {
-      alert("Failed to cancel booking");
+      alert("Failed to cancel");
     } finally {
       setCancelling(false);
     }
@@ -121,7 +221,6 @@ function BookingModal({ booking, onClose, onCancel }) {
         animate={{ opacity: 1, scale: 1 }}
         className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
       >
-        {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
             <p className="font-mono text-[9px] text-slate-600 uppercase tracking-wider">
@@ -135,16 +234,13 @@ function BookingModal({ booking, onClose, onCancel }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-semibold px-2.5 py-1 rounded-lg"
-              style={{
-                color: sc.text,
-                background: sc.bg,
-                border: `1px solid ${sc.border}`,
+            <StatusDropdown
+              booking={booking}
+              onUpdate={(id, status) => {
+                onUpdate(id, status);
+                booking.status = status;
               }}
-            >
-              {booking.status}
-            </span>
+            />
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg border border-dark-500 text-slate-500 hover:text-slate-300 transition-all"
@@ -154,36 +250,30 @@ function BookingModal({ booking, onClose, onCancel }) {
           </div>
         </div>
 
-        {/* QR + carrier */}
         <div className="flex gap-4 mb-5">
           <QRCode value={booking.tracking_number} size={120} />
           <div className="space-y-2 flex-1">
-            <div className="bg-dark-800 rounded-lg p-2.5 border border-dark-600">
-              <p className="text-[9px] text-slate-600 font-mono uppercase">
-                Carrier
-              </p>
-              <p className="text-sm font-bold" style={{ color: cc }}>
-                {booking.carrier} · {booking.service_type}
-              </p>
-            </div>
-            <div className="bg-dark-800 rounded-lg p-2.5 border border-dark-600">
-              <p className="text-[9px] text-slate-600 font-mono uppercase">
-                Type
-              </p>
-              <p className="text-sm font-bold">{booking.booking_type}</p>
-            </div>
-            <div className="bg-dark-800 rounded-lg p-2.5 border border-dark-600">
-              <p className="text-[9px] text-slate-600 font-mono uppercase">
-                Rate
-              </p>
-              <p className="text-sm font-bold text-emerald-400">
-                ₹{booking.carrier_rate?.toLocaleString()}
-              </p>
-            </div>
+            {[
+              ["Carrier", `${booking.carrier} · ${booking.service_type}`, cc],
+              ["Type", booking.booking_type, "#94a3b8"],
+              ["Rate", `₹${booking.carrier_rate?.toLocaleString()}`, "#4ade80"],
+              ["Est Days", `${booking.estimated_days} days`, "#94a3b8"],
+            ].map(([l, v, c]) => (
+              <div
+                key={l}
+                className="bg-dark-800 rounded-lg p-2.5 border border-dark-600"
+              >
+                <p className="text-[9px] text-slate-600 font-mono uppercase">
+                  {l}
+                </p>
+                <p className="text-sm font-bold" style={{ color: c }}>
+                  {v}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Address */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-dark-800 rounded-xl p-3 border border-dark-600">
             <p className="text-[9px] text-slate-600 font-mono uppercase mb-1">
@@ -212,7 +302,6 @@ function BookingModal({ booking, onClose, onCancel }) {
           </div>
         </div>
 
-        {/* Package */}
         <div className="grid grid-cols-3 gap-2 mb-5">
           {[
             ["Product", booking.product_name || "—"],
@@ -223,7 +312,6 @@ function BookingModal({ booking, onClose, onCancel }) {
                 ? `₹${booking.declared_value?.toLocaleString()}`
                 : "—",
             ],
-            ["Est Days", `${booking.estimated_days} days`],
             [
               "Booked",
               new Date(booking.created_at).toLocaleDateString("en-IN"),
@@ -234,6 +322,7 @@ function BookingModal({ booking, onClose, onCancel }) {
                 ? `${booking.length_cm}×${booking.width_cm}×${booking.height_cm}`
                 : "—",
             ],
+            ["B-Type", booking.booking_type],
           ].map(([l, v]) => (
             <div
               key={l}
@@ -247,7 +336,6 @@ function BookingModal({ booking, onClose, onCancel }) {
           ))}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <button
             onClick={handlePrint}
@@ -266,7 +354,7 @@ function BookingModal({ booking, onClose, onCancel }) {
               ) : (
                 <XMarkIcon className="w-4 h-4" />
               )}
-              Cancel Booking
+              Cancel
             </button>
           )}
         </div>
@@ -275,7 +363,7 @@ function BookingModal({ booking, onClose, onCancel }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main page ─────────────────────────────────────────────────────────────────
 export default function BookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -299,17 +387,25 @@ export default function BookingsPage() {
     load();
   }, [load]);
 
-  const handleCancel = (id) => {
+  const handleUpdate = (id, status) => {
     setBookings((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "Cancelled" } : b)),
+      prev.map((b) => (b.id === id ? { ...b, status } : b)),
     );
+    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
   };
 
-  const FILTERS = ["All", "Booked", "In Transit", "Delivered", "Cancelled"];
+  const FILTERS = [
+    "All",
+    "Booked",
+    "In Transit",
+    "Out for Delivery",
+    "Delivered",
+    "Cancelled",
+  ];
 
   const filtered = bookings.filter((b) => {
-    const matchesFilter = filter === "All" || b.status === filter;
-    const matchesSearch =
+    const matchFilter = filter === "All" || b.status === filter;
+    const matchSearch =
       !search ||
       [
         b.tracking_number,
@@ -319,25 +415,25 @@ export default function BookingsPage() {
         b.product_name,
         b.booking_type,
       ].some((v) => v?.toLowerCase().includes(search.toLowerCase()));
-    return matchesFilter && matchesSearch;
+    return matchFilter && matchSearch;
   });
 
   const stats = {
     total: bookings.length,
     booked: bookings.filter((b) => b.status === "Booked").length,
     transit: bookings.filter((b) => b.status === "In Transit").length,
+    ofd: bookings.filter((b) => b.status === "Out for Delivery").length,
     delivered: bookings.filter((b) => b.status === "Delivered").length,
     b2b: bookings.filter((b) => b.booking_type === "B2B").length,
-    b2c: bookings.filter((b) => b.booking_type === "B2C").length,
   };
 
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="page-header">
         <div>
-          <h1 className="section-title">Bookings</h1>
+          <h1 className="section-title">All Bookings</h1>
           <p className="section-sub">
-            // {bookings.length} total · B2B + B2C · DTDC · Delhivery · DHL
+            // {bookings.length} total · update status inline from the table
           </p>
         </div>
         <button onClick={load} className="btn-ghost">
@@ -351,9 +447,9 @@ export default function BookingsPage() {
           ["Total", stats.total, "#60a5fa"],
           ["Booked", stats.booked, "#60a5fa"],
           ["Transit", stats.transit, "#fbbf24"],
+          ["Out/Del", stats.ofd, "#f97316"],
           ["Delivered", stats.delivered, "#4ade80"],
           ["B2B", stats.b2b, "#818cf8"],
-          ["B2C", stats.b2c, "#e879f9"],
         ].map(([l, v, c]) => (
           <div key={l} className="card p-3 text-center">
             <p
@@ -373,7 +469,7 @@ export default function BookingsPage() {
           <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             className="input pl-9"
-            placeholder="Search tracking number, receiver, carrier…"
+            placeholder="Search tracking, receiver, carrier…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -383,11 +479,8 @@ export default function BookingsPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                filter === f
-                  ? "bg-brand-red/20 border-brand-red/40 text-brand-red"
-                  : "border-dark-500 text-slate-500 hover:text-slate-300"
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                ${filter === f ? "bg-brand-red/20 border-brand-red/40 text-brand-red" : "border-dark-500 text-slate-500 hover:text-slate-300"}`}
             >
               {f}
             </button>
@@ -406,9 +499,6 @@ export default function BookingsPage() {
         <div className="card p-12 text-center">
           <TruckIcon className="w-10 h-10 text-dark-500 mx-auto mb-3" />
           <p className="text-slate-500 text-sm">No bookings found.</p>
-          <p className="text-[10px] text-slate-600 font-mono mt-1">
-            Try changing the filter or create a new booking.
-          </p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -440,7 +530,6 @@ export default function BookingsPage() {
               <tbody>
                 {filtered.map((b, i) => {
                   const cc = CARRIER_COLORS[b.carrier] || "#e8001d";
-                  const sc = STATUS_COLORS[b.status] || STATUS_COLORS["Booked"];
                   return (
                     <tr
                       key={b.id}
@@ -454,11 +543,8 @@ export default function BookingsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                            b.booking_type === "B2B"
-                              ? "bg-purple-500/15 text-purple-400"
-                              : "bg-pink-500/15 text-pink-400"
-                          }`}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded
+                          ${b.booking_type === "B2B" ? "bg-purple-500/15 text-purple-400" : "bg-pink-500/15 text-pink-400"}`}
                         >
                           {b.booking_type}
                         </span>
@@ -482,16 +568,7 @@ export default function BookingsPage() {
                         ₹{b.carrier_rate?.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-lg"
-                          style={{
-                            color: sc.text,
-                            background: sc.bg,
-                            border: `1px solid ${sc.border}`,
-                          }}
-                        >
-                          {b.status}
-                        </span>
+                        <StatusDropdown booking={b} onUpdate={handleUpdate} />
                       </td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                         {new Date(b.created_at).toLocaleDateString("en-IN", {
@@ -526,13 +603,12 @@ export default function BookingsPage() {
         </div>
       )}
 
-      {/* Detail modal */}
       <AnimatePresence>
         {selected && (
           <BookingModal
             booking={selected}
             onClose={() => setSelected(null)}
-            onCancel={handleCancel}
+            onUpdate={handleUpdate}
           />
         )}
       </AnimatePresence>

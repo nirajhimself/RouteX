@@ -14,6 +14,9 @@ import {
   MagnifyingGlassIcon,
   ClipboardDocumentListIcon,
   BellIcon,
+  SparklesIcon,
+  FireIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 
 const NAV = [
@@ -40,9 +43,17 @@ const NAV = [
     icon: ClipboardDocumentListIcon,
     group: "main",
   },
+  // ✅ Invoices added here with correct group and Heroicon
+  {
+    path: "/invoices",
+    label: "Invoices",
+    icon: DocumentTextIcon,
+    group: "main",
+  },
   { path: "/routes", label: "Routes", icon: MapIcon, group: "ops" },
   { path: "/tracking", label: "Tracking", icon: SignalIcon, group: "ops" },
   { path: "/analytics", label: "Analytics", icon: ChartBarIcon, group: "ops" },
+  { path: "/heatmap", label: "Heatmap", icon: FireIcon, group: "ops" },
   {
     path: "/track",
     label: "Track Shipment",
@@ -53,6 +64,12 @@ const NAV = [
     path: "/notifications",
     label: "Notifications",
     icon: BellIcon,
+    group: "ops",
+  },
+  {
+    path: "/negotiation",
+    label: "AI Negotiate",
+    icon: SparklesIcon,
     group: "ops",
   },
 ];
@@ -66,7 +83,7 @@ export default function Sidebar({ open, onClose }) {
       <div className="px-4 mb-6 flex items-center justify-between">
         <div className="flex items-center gap-0 select-none">
           <span
-            className="font-display text-2xl font-bold text-slate-100 dark:text-slate-100 leading-none"
+            className="font-display text-2xl font-bold text-slate-100 leading-none"
             style={{ fontFamily: "Syne,sans-serif" }}
           >
             Route
@@ -90,9 +107,9 @@ export default function Sidebar({ open, onClose }) {
         </button>
       </div>
 
-      {/* Main Nav */}
+      {/* Operations */}
       <div className="px-2 mb-2">
-        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 dark:text-slate-600 uppercase mb-1.5 font-mono">
+        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 uppercase mb-1.5 font-mono">
           Operations
         </p>
         {NAV.filter((n) => n.group === "main").map(
@@ -113,8 +130,9 @@ export default function Sidebar({ open, onClose }) {
         )}
       </div>
 
+      {/* Intelligence */}
       <div className="px-2">
-        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 dark:text-slate-600 uppercase mb-1.5 font-mono">
+        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 uppercase mb-1.5 font-mono">
           Intelligence
         </p>
         {NAV.filter((n) => n.group === "ops").map(
@@ -135,8 +153,8 @@ export default function Sidebar({ open, onClose }) {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto px-4 pt-4 border-t border-dark-500 dark:border-dark-500 light:border-slate-200">
-        <div className="bg-dark-700 dark:bg-dark-700 light:bg-slate-50 rounded-lg p-3 border border-dark-500 dark:border-dark-500 light:border-slate-200">
+      <div className="mt-auto px-4 pt-4 border-t border-dark-500">
+        <div className="bg-dark-700 rounded-lg p-3 border border-dark-500">
           <p className="text-[10px] font-mono text-slate-500 mb-2 uppercase tracking-wider">
             System
           </p>
@@ -161,7 +179,7 @@ export default function Sidebar({ open, onClose }) {
   return (
     <>
       {/* Desktop */}
-      <aside className="hidden lg:flex flex-col w-52 bg-dark-900 dark:bg-dark-900 light:bg-white border-r border-dark-600 dark:border-dark-600 light:border-slate-200 fixed top-0 left-0 bottom-0 z-30">
+      <aside className="hidden lg:flex flex-col w-52 bg-dark-900 border-r border-dark-600 fixed top-0 left-0 bottom-0 z-30">
         <Content />
       </aside>
 

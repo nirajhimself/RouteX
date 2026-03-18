@@ -9,3 +9,7 @@ scikit-learn
 numpy
 pandas
 ortools
+httpx
+python-multipart
+passlib[bcrypt]
+python-jose[cryptography]

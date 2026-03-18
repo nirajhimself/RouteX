@@ -1,512 +1,727 @@
-import { useState, useEffect, useCallback } from "react";
-import { routeService } from "../services/routeService";
-import { shipmentService } from "../services/shipmentService";
-import { driverService } from "../services/driverService";
-import { COMPANY_ID } from "../config";
-import { PageLoader, ErrorState } from "../components/Loader";
-import { motion } from "framer-motion";
-import {
-  CpuChipIcon,
-  ExclamationTriangleIcon,
-  BoltIcon,
-} from "@heroicons/react/24/outline";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useState, useEffect } from "react";
 
-// ✅ Map string values to numbers for backend
-const TRAFFIC_MAP = { light: 1, moderate: 2, heavy: 3 };
-const WEATHER_MAP = { clear: 1, rain: 2, fog: 3, storm: 4 };
+const API = "http://localhost:8000";
+const CID = "demo-company";
 
-const DarkTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-dark-800 border border-dark-500 rounded-lg p-2.5 text-xs font-mono shadow-xl">
-      <p className="text-slate-500 mb-1">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }}>
-          {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  );
-};
+const COLORS = [
+  "#3b82f6",
+  "#f97316",
+  "#22c55e",
+  "#a855f7",
+  "#ec4899",
+  "#eab308",
+  "#14b8a6",
+  "#f43f5e",
+];
+
+function fmt(n) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
+}
 
 export default function Analytics() {
-  const [shipments, setShipments] = useState([]);
+  const [data, setData] = useState(null);
+  const [trend, setTrend] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [tab, setTab] = useState("overview");
 
-  const [delayForm, setDelayForm] = useState({
-    distance: "",
-    traffic: "moderate",
-    weather: "clear",
-  });
-  const [prediction, setPrediction] = useState(null);
-  const [predLoading, setPredLoading] = useState(false);
-  const [predError, setPredError] = useState("");
+  useEffect(() => {
+    fetchAll();
+  }, []);
 
-  const load = useCallback(async () => {
+  async function fetchAll() {
     setLoading(true);
-    setError(null);
     try {
-      const [sRes, dRes] = await Promise.all([
-        shipmentService.getAll(COMPANY_ID),
-        driverService.getAll(COMPANY_ID),
+      const [s, r, d] = await Promise.all([
+        fetch(`${API}/analytics/summary/${CID}`).then((r) => r.json()),
+        fetch(`${API}/analytics/revenue/${CID}?days=30`).then((r) => r.json()),
+        fetch(`${API}/analytics/drivers/${CID}`).then((r) => r.json()),
       ]);
-      const sList = Array.isArray(sRes.data)
-        ? sRes.data
-        : (sRes.data?.shipments ?? sRes.data?.data ?? []);
-      const dList = Array.isArray(dRes.data)
-        ? dRes.data
-        : (dRes.data?.drivers ?? dRes.data?.data ?? []);
-      setShipments(sList);
-      setDrivers(dList);
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          err.message ||
-          "Failed to load analytics",
-      );
+      setData(s);
+      setTrend(r);
+      setDrivers(Array.isArray(d) ? d : []);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handlePredict = async () => {
-    if (!delayForm.distance) {
-      setPredError("Distance is required");
-      return;
-    }
-    setPredLoading(true);
-    setPredError("");
-    setPrediction(null);
-    try {
-      // ✅ Convert strings to numbers before sending to backend
-      const payload = {
-        distance: parseFloat(delayForm.distance),
-        traffic: TRAFFIC_MAP[delayForm.traffic] || 2, // "moderate" → 2
-        vehicle_type: WEATHER_MAP[delayForm.weather] || 1, // weather mapped to vehicle_type field
-      };
-      const res = await routeService.predictDelay(payload);
-      setPrediction(res.data);
-    } catch (err) {
-      setPredError(
-        err?.response?.data?.detail ||
-          err.message ||
-          "Prediction failed. Is the backend running?",
-      );
-    } finally {
-      setPredLoading(false);
-    }
-  };
-
-  if (loading) return <PageLoader label="Loading analytics…" />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
-
-  // Build charts from real data
-  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const byDay = Array(7).fill(0);
-  const delayByDay = Array(7).fill(0);
-  shipments.forEach((s) => {
-    const d = s.created_at || s.date;
-    if (d) {
-      const day = new Date(d).getDay();
-      byDay[day]++;
-      if ((s.status || "").toLowerCase().includes("delay")) delayByDay[day]++;
-    }
-  });
-  const weeklyChart = DAYS.map((day, i) => ({
-    day,
-    onTime: byDay[i] - delayByDay[i],
-    delays: delayByDay[i],
-  }));
-
-  const byMonth = {};
-  shipments.forEach((s) => {
-    const d = s.created_at || s.date;
-    if (d) {
-      const key = new Date(d).toLocaleString("default", {
-        month: "short",
-        year: "2-digit",
-      });
-      byMonth[key] = (byMonth[key] || 0) + 1;
-    }
-  });
-  const monthlyChart = Object.entries(byMonth).map(([m, v]) => ({
-    m,
-    count: v,
-  }));
-
-  const total = shipments.length;
-  const delivered = shipments.filter((s) =>
-    (s.status || "").toLowerCase().includes("deliver"),
-  ).length;
-  const delayed = shipments.filter((s) =>
-    (s.status || "").toLowerCase().includes("delay"),
-  ).length;
-  const onTimeRate =
-    total > 0 ? (((total - delayed) / total) * 100).toFixed(1) : "—";
-
-  const riskColor = { High: "#f87171", Medium: "#fbbf24", Low: "#4ade80" };
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <div>
-          <h1 className="section-title">Operations Analytics</h1>
-          <p className="section-sub">
-            // live from database · {total} total shipments
-          </p>
+  if (loading)
+    return (
+      <div style={s.page}>
+        <div style={s.loadWrap}>
+          <div style={s.spin} />
+          <span style={{ color: "#64748b" }}>Loading analytics…</span>
         </div>
       </div>
+    );
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  if (!data)
+    return (
+      <div style={s.page}>
+        <div style={s.loadWrap}>
+          <span style={{ color: "#64748b" }}>
+            No data available yet. Create some bookings first.
+          </span>
+        </div>
+      </div>
+    );
+
+  const maxRevenue = Math.max(
+    ...(trend?.daily_revenue || []).map((d) => d.revenue),
+    1,
+  );
+  const maxCity = Math.max(...(data.top_cities || []).map((c) => c.count), 1);
+
+  return (
+    <div style={s.page}>
+      {/* Header */}
+      <div style={s.header}>
+        <div>
+          <h1 style={s.title}>Analytics</h1>
+          <p style={s.sub}>Real-time business intelligence</p>
+        </div>
+        <button onClick={fetchAll} style={s.refreshBtn}>
+          ↻ Refresh
+        </button>
+      </div>
+
+      {/* Summary KPIs */}
+      <div style={s.kpiGrid}>
         {[
-          ["On-Time Rate", `${onTimeRate}%`, "#4ade80"],
-          ["Total Shipments", total, "#60a5fa"],
-          ["Delivered", delivered, "#4ade80"],
-          ["Delayed", delayed, "#f87171"],
-        ].map(([l, v, c]) => (
-          <div key={l} className="card p-4">
-            <p
-              className="text-2xl font-bold leading-none mb-1"
-              style={{ fontFamily: "Syne,sans-serif", color: c }}
-            >
-              {v}
-            </p>
-            <p className="text-xs text-slate-500">{l}</p>
+          {
+            label: "Total Bookings",
+            value: data.summary.total_bookings,
+            color: "#60a5fa",
+            icon: "📦",
+          },
+          {
+            label: "Total Revenue",
+            value: fmt(data.summary.total_revenue),
+            color: "#4ade80",
+            icon: "💰",
+          },
+          {
+            label: "Avg Order Value",
+            value: fmt(data.summary.avg_order_value),
+            color: "#f97316",
+            icon: "📊",
+          },
+          {
+            label: "Success Rate",
+            value: `${data.summary.success_rate}%`,
+            color: "#a78bfa",
+            icon: "✅",
+          },
+          {
+            label: "Total Shipments",
+            value: data.summary.total_shipments,
+            color: "#38bdf8",
+            icon: "🚛",
+          },
+        ].map((k) => (
+          <div key={k.label} style={s.kpiCard}>
+            <span style={{ fontSize: 22 }}>{k.icon}</span>
+            <div>
+              <div style={{ ...s.kpiVal, color: k.color }}>{k.value}</div>
+              <div style={s.kpiLabel}>{k.label}</div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Weekly chart */}
-      {weeklyChart.some((d) => d.onTime > 0 || d.delays > 0) && (
-        <div className="card p-5">
-          <h3
-            className="text-sm font-semibold mb-1"
-            style={{ fontFamily: "Syne,sans-serif" }}
+      {/* Tabs */}
+      <div style={s.tabs}>
+        {["overview", "revenue", "cities", "drivers"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }}
           >
-            Weekly Delivery Performance
-          </h3>
-          <p className="font-mono text-[10px] text-slate-600 mb-4">
-            on-time vs delayed
-          </p>
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={weeklyChart} barGap={4}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="rgba(255,255,255,.04)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="day"
-                tick={{
-                  fontSize: 10,
-                  fill: "#475569",
-                  fontFamily: "monospace",
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{
-                  fontSize: 10,
-                  fill: "#475569",
-                  fontFamily: "monospace",
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<DarkTooltip />} />
-              <Bar
-                dataKey="onTime"
-                name="On Time"
-                radius={[3, 3, 0, 0]}
-                barSize={18}
-                fill="#1f3a28"
-              />
-              <Bar
-                dataKey="delays"
-                name="Delayed"
-                radius={[3, 3, 0, 0]}
-                barSize={18}
-                fill="#e8001d"
-                opacity={0.8}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
 
-      {/* Monthly chart */}
-      {monthlyChart.length > 1 && (
-        <div className="card p-5">
-          <h3
-            className="text-sm font-semibold mb-1"
-            style={{ fontFamily: "Syne,sans-serif" }}
-          >
-            Shipment Volume Over Time
-          </h3>
-          <p className="font-mono text-[10px] text-slate-600 mb-4">
-            monthly shipment count
-          </p>
-          <ResponsiveContainer width="100%" height={170}>
-            <AreaChart data={monthlyChart}>
-              <defs>
-                <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#e8001d" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#e8001d" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="rgba(255,255,255,.04)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="m"
-                tick={{
-                  fontSize: 10,
-                  fill: "#475569",
-                  fontFamily: "monospace",
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{
-                  fontSize: 10,
-                  fill: "#475569",
-                  fontFamily: "monospace",
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<DarkTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#e8001d"
-                strokeWidth={2}
-                fill="url(#rg)"
-                name="Shipments"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* AI Delay Predictor */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-brand-red/10 border border-brand-red/20 flex items-center justify-center">
-              <CpuChipIcon className="w-5 h-5 text-brand-red" />
-            </div>
-            <div>
-              <h2
-                className="font-semibold"
-                style={{ fontFamily: "Syne,sans-serif" }}
-              >
-                AI Delay Predictor
-              </h2>
-              <p className="font-mono text-[10px] text-slate-600">
-                POST /predict-delay → your backend
-              </p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            {predError && (
-              <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
-                {predError}
-              </div>
-            )}
-            <div>
-              <label className="label">Distance (km) *</label>
-              <input
-                type="number"
-                placeholder="e.g. 842"
-                value={delayForm.distance}
-                onChange={(e) =>
-                  setDelayForm((f) => ({ ...f, distance: e.target.value }))
-                }
-                className="input"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">Traffic</label>
-                <select
-                  className="select"
-                  value={delayForm.traffic}
-                  onChange={(e) =>
-                    setDelayForm((f) => ({ ...f, traffic: e.target.value }))
-                  }
-                >
-                  <option value="light">🟢 Light</option>
-                  <option value="moderate">🟡 Moderate</option>
-                  <option value="heavy">🔴 Heavy</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Weather</label>
-                <select
-                  className="select"
-                  value={delayForm.weather}
-                  onChange={(e) =>
-                    setDelayForm((f) => ({ ...f, weather: e.target.value }))
-                  }
-                >
-                  <option value="clear">☀️ Clear</option>
-                  <option value="rain">🌧 Rain</option>
-                  <option value="fog">🌫 Fog</option>
-                  <option value="storm">⛈ Storm</option>
-                </select>
-              </div>
-            </div>
-            <button
-              onClick={handlePredict}
-              disabled={predLoading}
-              className="btn-primary w-full justify-center py-2.5"
-            >
-              {predLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Analyzing…
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <BoltIcon className="w-4 h-4" />
-                  Predict Delay
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {prediction && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card p-6 flex flex-col"
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <ExclamationTriangleIcon
-                className="w-5 h-5"
-                style={{ color: riskColor[prediction.risk_level] || "#94a3b8" }}
-              />
-              <h2
-                className="font-semibold"
-                style={{ fontFamily: "Syne,sans-serif" }}
-              >
-                Prediction Results
-              </h2>
-              <span className="ml-auto font-mono text-[10px] text-slate-600">
-                from your AI model
-              </span>
-            </div>
-
-            {prediction.predicted_delay != null && (
-              <div className="flex flex-col items-center mb-6">
-                <div className="relative w-40 h-20">
-                  <svg viewBox="0 0 160 80" className="w-full">
-                    <path
-                      d="M 10 80 A 70 70 0 0 1 150 80"
-                      stroke="#1f2a3c"
-                      strokeWidth="12"
-                      fill="none"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M 10 80 A 70 70 0 0 1 150 80"
-                      stroke={riskColor[prediction.risk_level] || "#94a3b8"}
-                      strokeWidth="12"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={`${Math.min(prediction.confidence || 80, 100) * 2.2} 220`}
-                      style={{
-                        filter: `drop-shadow(0 0 8px ${riskColor[prediction.risk_level] || "#94a3b8"}60)`,
-                      }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+      {/* Tab content */}
+      {tab === "overview" && (
+        <div style={s.grid2}>
+          {/* Carrier revenue */}
+          <div style={s.card}>
+            <div style={s.cardTitle}>Revenue by Carrier</div>
+            {(data.revenue_by_carrier || []).length === 0 ? (
+              <div style={s.empty}>No carrier data yet</div>
+            ) : (
+              (data.revenue_by_carrier || []).map((c, i) => (
+                <div key={c.carrier} style={{ marginBottom: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
                     <span
-                      className="text-2xl font-bold"
                       style={{
-                        fontFamily: "Syne,sans-serif",
-                        color: riskColor[prediction.risk_level] || "#94a3b8",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#e2e8f0",
                       }}
                     >
-                      {prediction.predicted_delay}m
+                      {c.carrier}
+                    </span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>
+                      {fmt(c.revenue)} · {c.count} bookings
                     </span>
                   </div>
+                  <div
+                    style={{
+                      height: 6,
+                      background: "#1e293b",
+                      borderRadius: 3,
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        borderRadius: 3,
+                        background: COLORS[i % COLORS.length],
+                        width: `${Math.min(100, (c.revenue / (data.revenue_by_carrier[0]?.revenue || 1)) * 100)}%`,
+                        transition: "width 0.6s",
+                      }}
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Predicted delay
-                  {prediction.confidence
-                    ? ` · ${prediction.confidence}% confidence`
-                    : ""}
-                </p>
-              </div>
+              ))
             )}
+          </div>
 
-            {prediction.risk_level && (
-              <div className="flex justify-center mb-5">
-                <span
-                  className="badge text-sm px-4 py-1.5"
+          {/* Booking status */}
+          <div style={s.card}>
+            <div style={s.cardTitle}>Booking Status</div>
+            {(data.booking_status || []).length === 0 ? (
+              <div style={s.empty}>No booking data yet</div>
+            ) : (
+              (data.booking_status || []).map((b, i) => (
+                <div
+                  key={b.status}
                   style={{
-                    background: `${riskColor[prediction.risk_level]}12`,
-                    color: riskColor[prediction.risk_level],
-                    borderColor: `${riskColor[prediction.risk_level]}25`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 0",
+                    borderBottom: "1px solid #1e293b",
                   }}
                 >
-                  {prediction.risk_level} Risk
-                </span>
-              </div>
-            )}
-
-            {prediction.suggestions?.length > 0 && (
-              <div className="mt-auto space-y-2">
-                <p className="label">AI Recommendations</p>
-                {prediction.suggestions.map((s, i) => (
                   <div
-                    key={i}
-                    className="flex items-start gap-2 bg-dark-700 rounded-lg px-3 py-2.5 border border-dark-600"
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
                   >
-                    <span className="text-brand-red mt-0.5">→</span>
-                    <p className="text-xs text-slate-300">{s}</p>
+                    <div
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: COLORS[i % COLORS.length],
+                      }}
+                    />
+                    <span style={{ fontSize: 14, color: "#e2e8f0" }}>
+                      {b.status}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: COLORS[i % COLORS.length],
+                    }}
+                  >
+                    {b.count}
+                  </span>
+                </div>
+              ))
             )}
+          </div>
 
-            {/* Raw fallback */}
-            {!prediction.predicted_delay && !prediction.risk_level && (
-              <div className="space-y-2">
-                <p className="label">Raw Response</p>
-                <pre className="text-xs text-slate-400 bg-dark-700 rounded-lg p-4 overflow-auto max-h-48 font-mono">
-                  {JSON.stringify(prediction, null, 2)}
-                </pre>
-              </div>
+          {/* Weight distribution */}
+          <div style={s.card}>
+            <div style={s.cardTitle}>Weight Distribution</div>
+            {(data.weight_distribution || []).length === 0 ? (
+              <div style={s.empty}>No weight data yet</div>
+            ) : (
+              (data.weight_distribution || []).map((w, i) => (
+                <div key={w.range} style={{ marginBottom: 14 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>
+                      {w.range}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#e2e8f0",
+                      }}
+                    >
+                      {w.count}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      background: "#1e293b",
+                      borderRadius: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        borderRadius: 4,
+                        background: COLORS[i % COLORS.length],
+                        width: `${w.count === 0 ? 2 : Math.max(4, (w.count / Math.max(...(data.weight_distribution || []).map((x) => x.count), 1)) * 100)}%`,
+                        transition: "width 0.6s",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))
             )}
-          </motion.div>
-        )}
-      </div>
+          </div>
+
+          {/* Shipment status */}
+          <div style={s.card}>
+            <div style={s.cardTitle}>Shipment Status</div>
+            {(data.shipment_status || []).length === 0 ? (
+              <div style={s.empty}>No shipment data yet</div>
+            ) : (
+              (data.shipment_status || []).map((b, i) => (
+                <div
+                  key={b.status}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 0",
+                    borderBottom: "1px solid #1e293b",
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <div
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: COLORS[i % COLORS.length],
+                      }}
+                    />
+                    <span style={{ fontSize: 14, color: "#e2e8f0" }}>
+                      {b.status}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: COLORS[i % COLORS.length],
+                    }}
+                  >
+                    {b.count}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "revenue" && (
+        <div style={s.card}>
+          <div style={s.cardTitle}>Daily Revenue — Last 30 Days</div>
+          <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+            Total: {fmt(trend?.total)}
+          </div>
+          {!trend?.daily_revenue || trend.daily_revenue.length === 0 ? (
+            <div style={s.empty}>
+              No revenue data yet. Create some bookings!
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 3,
+                height: 160,
+                padding: "0 4px",
+              }}
+            >
+              {trend.daily_revenue.map((d, i) => (
+                <div
+                  key={d.date}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <div
+                    title={`${d.date}: ${fmt(d.revenue)}`}
+                    style={{
+                      width: "100%",
+                      background: "#3b82f6",
+                      borderRadius: "3px 3px 0 0",
+                      height: `${Math.max(4, (d.revenue / maxRevenue) * 130)}px`,
+                      transition: "height 0.4s",
+                      opacity: d.revenue === 0 ? 0.2 : 1,
+                    }}
+                  />
+                  {i % 7 === 0 && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: "#475569",
+                        whiteSpace: "nowrap",
+                        transform: "rotate(-40deg)",
+                        transformOrigin: "top center",
+                      }}
+                    >
+                      {d.date.slice(5)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "cities" && (
+        <div style={s.card}>
+          <div style={s.cardTitle}>Top Delivery Cities</div>
+          {(data.top_cities || []).length === 0 ? (
+            <div style={s.empty}>No city data yet</div>
+          ) : (
+            (data.top_cities || []).map((c, i) => (
+              <div key={c.city} style={{ marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#94a3b8",
+                        width: 20,
+                        textAlign: "right",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: "#e2e8f0",
+                      }}
+                    >
+                      {c.city}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: COLORS[i % COLORS.length],
+                    }}
+                  >
+                    {c.count} deliveries
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 8,
+                    background: "#1e293b",
+                    borderRadius: 4,
+                    marginLeft: 28,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 4,
+                      background: COLORS[i % COLORS.length],
+                      width: `${(c.count / maxCity) * 100}%`,
+                      transition: "width 0.6s",
+                    }}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === "drivers" && (
+        <div style={s.card}>
+          <div style={s.cardTitle}>Driver Performance</div>
+          {drivers.length === 0 ? (
+            <div style={s.empty}>No driver data yet</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {[
+                      "Driver",
+                      "Trips",
+                      "Delivered",
+                      "Pending",
+                      "Success Rate",
+                      "Status",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "left",
+                          color: "#64748b",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          borderBottom: "1px solid #1e293b",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {drivers.map((d) => (
+                    <tr
+                      key={d.driver_id}
+                      style={{ borderBottom: "1px solid #0f172a" }}
+                    >
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#e2e8f0",
+                        }}
+                      >
+                        {d.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: 14,
+                          color: "#94a3b8",
+                        }}
+                      >
+                        {d.total_trips}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: 14,
+                          color: "#4ade80",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {d.delivered}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: 14,
+                          color: "#fbbf24",
+                        }}
+                      >
+                        {d.pending}
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 60,
+                              height: 6,
+                              background: "#1e293b",
+                              borderRadius: 3,
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                borderRadius: 3,
+                                background:
+                                  d.success_rate >= 80
+                                    ? "#4ade80"
+                                    : d.success_rate >= 50
+                                      ? "#fbbf24"
+                                      : "#f87171",
+                                width: `${d.success_rate}%`,
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 13, color: "#94a3b8" }}>
+                            {d.success_rate}%
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <span
+                          style={{
+                            background: d.is_available ? "#052e16" : "#1c0a0a",
+                            color: d.is_available ? "#4ade80" : "#f87171",
+                            padding: "3px 10px",
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {d.is_available ? "Available" : "On Trip"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+const s = {
+  page: {
+    padding: "28px 32px",
+    background: "#020617",
+    minHeight: "100vh",
+    color: "#e2e8f0",
+    fontFamily: "'DM Sans','Segoe UI',sans-serif",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  title: {
+    margin: "0 0 4px",
+    fontSize: 26,
+    fontWeight: 700,
+    color: "#f1f5f9",
+    letterSpacing: "-0.5px",
+  },
+  sub: { margin: 0, color: "#64748b", fontSize: 14 },
+  refreshBtn: {
+    background: "transparent",
+    color: "#94a3b8",
+    border: "1px solid #1e293b",
+    borderRadius: 8,
+    padding: "8px 16px",
+    cursor: "pointer",
+    fontSize: 13,
+  },
+  kpiGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5,1fr)",
+    gap: 12,
+    marginBottom: 24,
+  },
+  kpiCard: {
+    background: "#0f172a",
+    border: "1px solid #1e293b",
+    borderRadius: 12,
+    padding: "14px 16px",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  kpiVal: { fontSize: 20, fontWeight: 700, lineHeight: 1 },
+  kpiLabel: { color: "#64748b", fontSize: 12, marginTop: 4 },
+  tabs: {
+    display: "flex",
+    gap: 4,
+    background: "#0f172a",
+    padding: 4,
+    borderRadius: 10,
+    border: "1px solid #1e293b",
+    marginBottom: 20,
+    width: "fit-content",
+  },
+  tab: {
+    background: "none",
+    border: "none",
+    color: "#64748b",
+    padding: "7px 18px",
+    borderRadius: 7,
+    cursor: "pointer",
+    fontSize: 13,
+    transition: "all 0.15s",
+  },
+  tabActive: { background: "#1e293b", color: "#e2e8f0", fontWeight: 600 },
+  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+  card: {
+    background: "#0f172a",
+    border: "1px solid #1e293b",
+    borderRadius: 14,
+    padding: 20,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#f1f5f9",
+    marginBottom: 16,
+  },
+  empty: {
+    color: "#475569",
+    fontSize: 13,
+    textAlign: "center",
+    padding: "32px 0",
+  },
+  loadWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    minHeight: "60vh",
+  },
+  spin: {
+    width: 20,
+    height: 20,
+    border: "2px solid #1e293b",
+    borderTopColor: "#3b82f6",
+    borderRadius: "50%",
+    animation: "spin 0.7s linear infinite",
+  },
+};

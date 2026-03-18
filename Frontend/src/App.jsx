@@ -14,7 +14,9 @@ import Booking from "./pages/Booking";
 import TrackingPortal from "./pages/TrackingPortal";
 import BookingsPage from "./pages/BookingsPage";
 import Notifications from "./pages/Notifications";
-
+import Negotiation from "./pages/Negotiation";
+import HeatMap from "./pages/HeatMap";
+import Invoices from "./components/Invoices";
 export default function App() {
   return (
     <Routes>
@@ -35,6 +37,9 @@ export default function App() {
         <Route path="/track/:id" element={<TrackingPortal />} />
         <Route path="/bookings-list" element={<BookingsPage />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/negotiation" element={<Negotiation />} />
+        <Route path="/heatmap" element={<HeatMap />} />
+        <Route path="/invoices" element={<Invoices />} />
       </Route>
     </Routes>
   );

@@ -1,591 +1,703 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import api from "../api/api";
-import { COMPANY_ID } from "../config";
-import {
-  BellIcon,
-  ChatBubbleLeftIcon,
-  EnvelopeIcon,
-  DevicePhoneMobileIcon,
-  ArrowPathIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  PaperAirplaneIcon,
-  MagnifyingGlassIcon,
-  ChevronDownIcon,
-} from "@heroicons/react/24/outline";
 
-// ─── Carrier colors ───────────────────────────────────────────────────────────
-const CARRIER_COLORS = {
-  Delhivery: "#60a5fa",
-  DTDC: "#f97316",
-  DHL: "#fbbf24",
+const API = "http://localhost:8000";
+const CID = 1; // company id
+
+const TYPE_STYLES = {
+  info: { bg: "#0c1a2e", color: "#60a5fa", border: "#1e3a5f", icon: "ℹ️" },
+  success: { bg: "#052e16", color: "#4ade80", border: "#166534", icon: "✅" },
+  warning: { bg: "#1c1500", color: "#fbbf24", border: "#854d0e", icon: "⚠️" },
+  error: { bg: "#1f0a0a", color: "#f87171", border: "#7f1d1d", icon: "🚨" },
 };
 
-const ALL_STATUSES = [
-  "Booked",
-  "Pickup Scheduled",
-  "In Transit",
-  "Out for Delivery",
-  "Delivered",
-  "Cancelled",
+const CAT_ICONS = {
+  system: "⚙️",
+  shipment: "🚛",
+  booking: "📦",
+  driver: "👤",
+  invoice: "🧾",
+};
+
+const DEMO_NOTIFICATIONS = [
+  {
+    title: "New shipment assigned",
+    message: "Shipment #SHP-001 has been assigned to you",
+    type: "info",
+    category: "shipment",
+  },
+  {
+    title: "Booking delivered",
+    message: "Booking DLV123 has been delivered successfully",
+    type: "success",
+    category: "booking",
+  },
+  {
+    title: "Driver offline",
+    message: "Driver Rajesh Kumar has gone offline",
+    type: "warning",
+    category: "driver",
+  },
+  {
+    title: "Invoice overdue",
+    message: "Invoice INV-2024-001 is overdue by 5 days",
+    type: "error",
+    category: "invoice",
+  },
+  {
+    title: "Route optimized",
+    message: "Route RT-38 saved 34 km with new optimization",
+    type: "success",
+    category: "system",
+  },
 ];
 
-// ─── Channel toggle ───────────────────────────────────────────────────────────
-function ChannelToggle({ label, icon: Icon, color, active, onToggle }) {
-  return (
-    <button
-      onClick={onToggle}
-      className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all"
-      style={{
-        borderColor: active ? `${color}40` : "#1f2a3c",
-        background: active ? `${color}12` : "transparent",
-        color: active ? color : "#475569",
-      }}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      {label}
-      <span
-        className={`w-2 h-2 rounded-full ml-1 ${active ? "bg-current" : "bg-slate-700"}`}
-      />
-    </button>
-  );
-}
+export default function Notifications() {
+  const [notifications, setNotifications] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [showCreate, setShowCreate] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({
+    title: "",
+    message: "",
+    type: "info",
+    category: "system",
+  });
 
-// ─── Send notification modal ──────────────────────────────────────────────────
-function SendModal({ booking, onClose, channels }) {
-  const [status, setStatus] = useState(booking.status);
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState(null);
-  const cc = CARRIER_COLORS[booking.carrier] || "#e8001d";
-
-  const handleSend = async () => {
-    setSending(true);
-    try {
-      const res = await api.patch(`/booking/${booking.id}/status`, {
-        status,
-        channels: Object.keys(channels).filter((k) => channels[k]),
-      });
-      setResult({ success: true, data: res.data });
-    } catch (err) {
-      setResult({
-        success: false,
-        error: err?.response?.data?.detail || "Failed",
-      });
-    } finally {
-      setSending(false);
-    }
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="card p-6 w-full max-w-md"
-      >
-        <h3
-          className="font-bold text-base mb-1"
-          style={{ fontFamily: "Syne,sans-serif" }}
-        >
-          Update Status & Notify
-        </h3>
-        <p className="text-[10px] text-slate-500 font-mono mb-5">
-          {booking.tracking_number} · {booking.receiver_name}
-        </p>
-
-        {!result ? (
-          <>
-            <div className="mb-4">
-              <label className="label mb-2">New Status</label>
-              <div className="grid grid-cols-2 gap-2">
-                {ALL_STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(s)}
-                    className="px-3 py-2 rounded-xl border text-xs font-semibold text-left transition-all"
-                    style={{
-                      borderColor: status === s ? `${cc}40` : "#1f2a3c",
-                      background: status === s ? `${cc}12` : "transparent",
-                      color: status === s ? cc : "#475569",
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <label className="label mb-2">Notify via</label>
-              <div className="bg-dark-800 rounded-xl p-3 border border-dark-600 space-y-1 text-xs text-slate-400 font-mono">
-                <p>📱 SMS → {booking.receiver_phone || "No phone saved"}</p>
-                <p>
-                  💬 WhatsApp → {booking.receiver_phone || "No phone saved"}
-                </p>
-                <p>📧 Email → {booking.receiver_email || "No email saved"}</p>
-                <p className="text-[9px] text-slate-600 mt-2">
-                  Active channels from settings panel apply automatically.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="btn-ghost flex-1 justify-center"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={sending}
-                className="btn-primary flex-1 justify-center disabled:opacity-60"
-              >
-                {sending ? (
-                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <PaperAirplaneIcon className="w-4 h-4" /> Send
-                  </>
-                )}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            {result.success ? (
-              <>
-                <CheckCircleIcon className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-                <p className="font-semibold text-emerald-400">
-                  Status Updated!
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {booking.tracking_number} →{" "}
-                  <span className="font-bold">{status}</span>
-                </p>
-                <div className="mt-3 bg-dark-800 rounded-xl p-3 border border-dark-600 text-left space-y-1">
-                  {Object.entries(result.data?.notifications || {}).map(
-                    ([ch, ok]) => (
-                      <div key={ch} className="flex items-center gap-2 text-xs">
-                        {ok ? (
-                          <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <XCircleIcon className="w-3.5 h-3.5 text-red-400" />
-                        )}
-                        <span className="capitalize font-mono">{ch}</span>
-                        <span
-                          className={ok ? "text-emerald-400" : "text-red-400"}
-                        >
-                          {ok ? "Sent" : "Failed"}
-                        </span>
-                      </div>
-                    ),
-                  )}
-                  {Object.keys(result.data?.notifications || {}).length ===
-                    0 && (
-                    <p className="text-xs text-slate-500">
-                      No channels were active (configure Twilio/SMTP keys).
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <XCircleIcon className="w-10 h-10 text-red-400 mx-auto mb-3" />
-                <p className="font-semibold text-red-400">Failed</p>
-                <p className="text-xs text-slate-500 mt-1">{result.error}</p>
-              </>
-            )}
-            <button
-              onClick={onClose}
-              className="btn-ghost mt-4 w-full justify-center"
-            >
-              Close
-            </button>
-          </div>
-        )}
-      </motion.div>
-    </div>
-  );
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-export default function Notifications() {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [channels, setChannels] = useState({
-    sms: true,
-    whatsapp: true,
-    email: true,
-  });
-  const [notifyOn, setNotifyOn] = useState({
-    Booked: true,
-    "Pickup Scheduled": true,
-    "In Transit": true,
-    "Out for Delivery": true,
-    Delivered: true,
-    Cancelled: true,
-  });
-  const [logs, setLogs] = useState([]);
-
-  const load = useCallback(async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/bookings/${COMPANY_ID}`);
-      setBookings(Array.isArray(res.data) ? res.data : []);
+      const r = await fetch(`${API}/notifications/${CID}`);
+      const data = await r.json();
+      setNotifications(data.notifications || []);
+      setUnread(data.unread_count || 0);
     } catch {
-      setBookings([]);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-  const handleSendResult = (trackingNumber, status, results) => {
-    setLogs((prev) =>
-      [
-        {
-          id: Date.now(),
-          tracking_number: trackingNumber,
-          status,
-          results,
-          time: new Date().toLocaleTimeString("en-IN"),
-        },
-        ...prev,
-      ].slice(0, 20),
-    );
-  };
+  // Auto-refresh every 30s
+  useEffect(() => {
+    const t = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(t);
+  }, [fetchNotifications]);
 
-  const filtered = bookings.filter(
-    (b) =>
-      !search ||
-      b.tracking_number?.toLowerCase().includes(search.toLowerCase()) ||
-      b.receiver_name?.toLowerCase().includes(search.toLowerCase()) ||
-      b.receiver_city?.toLowerCase().includes(search.toLowerCase()),
-  );
+  async function markAllRead() {
+    try {
+      await fetch(`${API}/notifications/read-all/${CID}`, { method: "PATCH" });
+      setNotifications((n) => n.map((x) => ({ ...x, is_read: true })));
+      setUnread(0);
+      showToast("All marked as read");
+    } catch {
+      showToast("Failed", "error");
+    }
+  }
+
+  async function markRead(id) {
+    try {
+      await fetch(`${API}/notifications/read`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id] }),
+      });
+      setNotifications((n) =>
+        n.map((x) => (x.id === id ? { ...x, is_read: true } : x)),
+      );
+      setUnread((u) => Math.max(0, u - 1));
+    } catch {}
+  }
+
+  async function deleteNotif(id) {
+    try {
+      await fetch(`${API}/notifications/${id}`, { method: "DELETE" });
+      setNotifications((n) => n.filter((x) => x.id !== id));
+      showToast("Deleted");
+    } catch {
+      showToast("Failed", "error");
+    }
+  }
+
+  async function clearAll() {
+    try {
+      await fetch(`${API}/notifications/clear/${CID}`, { method: "DELETE" });
+      setNotifications([]);
+      setUnread(0);
+      showToast("All cleared");
+    } catch {
+      showToast("Failed", "error");
+    }
+  }
+
+  async function createNotification() {
+    if (!form.title || !form.message)
+      return showToast("Fill title and message", "error");
+    try {
+      await fetch(`${API}/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_id: CID, ...form }),
+      });
+      setShowCreate(false);
+      setForm({ title: "", message: "", type: "info", category: "system" });
+      fetchNotifications();
+      showToast("Notification created");
+    } catch {
+      showToast("Failed", "error");
+    }
+  }
+
+  async function seedDemo() {
+    for (const n of DEMO_NOTIFICATIONS) {
+      await fetch(`${API}/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_id: CID, ...n }),
+      }).catch(() => {});
+    }
+    fetchNotifications();
+    showToast("Demo notifications added ✓");
+  }
+
+  const filtered = notifications.filter((n) => {
+    if (filter === "unread") return !n.is_read;
+    if (filter === "all") return true;
+    return n.category === filter;
+  });
+
+  const categories = [
+    "all",
+    "unread",
+    "system",
+    "shipment",
+    "booking",
+    "driver",
+    "invoice",
+  ];
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="page-header">
+    <div style={s.page}>
+      {/* Header */}
+      <div style={s.header}>
         <div>
-          <h1 className="section-title">Notifications</h1>
-          <p className="section-sub">
-            // Auto SMS · WhatsApp · Email on status change
-          </p>
+          <h1 style={s.title}>
+            Notifications
+            {unread > 0 && <span style={s.badge}>{unread}</span>}
+          </h1>
+          <p style={s.sub}>Real-time alerts and system updates</p>
         </div>
-        <button onClick={load} className="btn-ghost">
-          <ArrowPathIcon className="w-4 h-4" /> Refresh
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {notifications.length === 0 && (
+            <button
+              onClick={seedDemo}
+              style={{
+                ...s.btnGhost,
+                color: "#a78bfa",
+                borderColor: "#4c1d95",
+              }}
+            >
+              + Add Demo
+            </button>
+          )}
+          <button onClick={() => setShowCreate(true)} style={s.btnPrimary}>
+            + New
+          </button>
+          {unread > 0 && (
+            <button onClick={markAllRead} style={s.btnGhost}>
+              Mark all read
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              onClick={clearAll}
+              style={{
+                ...s.btnGhost,
+                color: "#f87171",
+                borderColor: "#7f1d1d",
+              }}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* LEFT — Settings */}
-        <div className="space-y-4">
-          {/* Channel toggles */}
-          <div className="card p-5">
-            <p className="font-mono text-[9px] text-slate-500 uppercase tracking-wider mb-4">
-              Active Channels
-            </p>
-            <div className="flex flex-col gap-2">
-              <ChannelToggle
-                label="SMS"
-                icon={DevicePhoneMobileIcon}
-                color="#4ade80"
-                active={channels.sms}
-                onToggle={() => setChannels((c) => ({ ...c, sms: !c.sms }))}
-              />
-              <ChannelToggle
-                label="WhatsApp"
-                icon={ChatBubbleLeftIcon}
-                color="#22c55e"
-                active={channels.whatsapp}
-                onToggle={() =>
-                  setChannels((c) => ({ ...c, whatsapp: !c.whatsapp }))
-                }
-              />
-              <ChannelToggle
-                label="Email"
-                icon={EnvelopeIcon}
-                color="#60a5fa"
-                active={channels.email}
-                onToggle={() => setChannels((c) => ({ ...c, email: !c.email }))}
-              />
-            </div>
-            <div className="mt-4 p-3 rounded-xl bg-dark-800 border border-dark-600">
-              <p className="text-[9px] text-slate-600 font-mono">
-                ⚙️ Add Twilio SID + Auth Token + SMTP credentials in
-                <span className="text-slate-400">
-                  {" "}
-                  notifications_backend.py
-                </span>{" "}
-                to activate.
-              </p>
-            </div>
-          </div>
+      {/* Filter tabs */}
+      <div
+        style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}
+      >
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            style={{
+              ...s.filterBtn,
+              ...(filter === cat ? s.filterActive : {}),
+            }}
+          >
+            {CAT_ICONS[cat] || ""} {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            {cat === "unread" && unread > 0 && (
+              <span
+                style={{
+                  background: "#ef4444",
+                  color: "#fff",
+                  borderRadius: 10,
+                  padding: "1px 6px",
+                  fontSize: 10,
+                  marginLeft: 4,
+                }}
+              >
+                {unread}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-          {/* Notify on status */}
-          <div className="card p-5">
-            <p className="font-mono text-[9px] text-slate-500 uppercase tracking-wider mb-4">
-              Notify On Status
-            </p>
-            <div className="space-y-2">
-              {ALL_STATUSES.map((s) => (
-                <div
-                  key={s}
-                  onClick={() => setNotifyOn((n) => ({ ...n, [s]: !n[s] }))}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-all"
-                  style={{
-                    borderColor: notifyOn[s] ? "#e8001d30" : "#1f2a3c",
-                    background: notifyOn[s] ? "#e8001d06" : "transparent",
-                  }}
-                >
-                  <span className="text-xs font-semibold">{s}</span>
-                  <div
-                    className={`w-8 h-4 rounded-full relative transition-all ${notifyOn[s] ? "bg-brand-red" : "bg-dark-600"}`}
-                  >
-                    <div
-                      className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all ${notifyOn[s] ? "right-0.5" : "left-0.5"}`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Notifications list */}
+      {loading ? (
+        <div style={s.loadWrap}>
+          <div style={s.spin} />
+          <span style={{ color: "#64748b" }}>Loading…</span>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={s.emptyState}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔔</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+            {filter === "unread"
+              ? "You're all caught up!"
+              : "No notifications yet"}
           </div>
-
-          {/* Message preview */}
-          <div className="card p-5">
-            <p className="font-mono text-[9px] text-slate-500 uppercase tracking-wider mb-3">
-              SMS Preview
-            </p>
-            <div className="bg-dark-800 rounded-xl p-3 border border-dark-600">
-              <p className="text-[10px] text-slate-400 font-mono leading-relaxed">
-                Hi [Customer]! Your package is IN TRANSIT with Delhivery.
-                Tracking: DLV1234567890. Track: routex.app/track/DLV1234567890
-              </p>
-            </div>
-            <div className="mt-3 bg-dark-800 rounded-xl p-3 border border-dark-600">
-              <p className="font-mono text-[9px] text-slate-600 uppercase mb-2">
-                WhatsApp Preview
-              </p>
-              <p className="text-[10px] text-slate-400 font-mono leading-relaxed">
-                📦 *RouteX Update*{"\n"}
-                Status: *Out for Delivery*{"\n"}
-                Tracking: `DLV1234567890`{"\n"}
-                Track your package: routex.app/track/...
-              </p>
-            </div>
+          <div style={{ fontSize: 13, color: "#475569", marginBottom: 20 }}>
+            {filter === "unread"
+              ? "No unread notifications."
+              : "Click '+ Add Demo' to seed sample notifications."}
           </div>
         </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.map((n) => {
+            const st = TYPE_STYLES[n.type] || TYPE_STYLES.info;
+            return (
+              <div
+                key={n.id}
+                onClick={() => !n.is_read && markRead(n.id)}
+                style={{
+                  background: n.is_read ? "#0f172a" : st.bg,
+                  border: `1px solid ${n.is_read ? "#1e293b" : st.border}`,
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  cursor: n.is_read ? "default" : "pointer",
+                  display: "flex",
+                  gap: 14,
+                  alignItems: "flex-start",
+                  transition: "all 0.15s",
+                  opacity: n.is_read ? 0.7 : 1,
+                }}
+              >
+                {/* Icon */}
+                <div style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>
+                  {st.icon}
+                </div>
 
-        {/* RIGHT — Booking list + send panel */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Activity log */}
-          {logs.length > 0 && (
-            <div className="card p-4">
-              <p className="font-mono text-[9px] text-slate-500 uppercase tracking-wider mb-3">
-                Recent Activity
-              </p>
-              <div className="space-y-2 max-h-36 overflow-y-auto">
-                {logs.map((log) => (
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
-                    key={log.id}
-                    className="flex items-center gap-3 text-xs px-3 py-2 rounded-lg bg-dark-800 border border-dark-600"
-                  >
-                    <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                    <span className="font-mono text-slate-300">
-                      {log.tracking_number}
-                    </span>
-                    <span className="text-slate-500">→</span>
-                    <span className="font-semibold">{log.status}</span>
-                    <span className="ml-auto text-[9px] text-slate-600 font-mono">
-                      {log.time}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Bookings to notify */}
-          <div className="card overflow-hidden">
-            <div className="p-4 border-b border-dark-700 flex items-center gap-3">
-              <div className="relative flex-1">
-                <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  className="input pl-8 py-2 text-xs"
-                  placeholder="Search bookings to notify…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">
-                {filtered.length} bookings
-              </span>
-            </div>
-
-            {loading ? (
-              <div className="p-10 flex items-center justify-center">
-                <span className="text-slate-500 text-sm font-mono animate-pulse">
-                  Loading…
-                </span>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-10 text-center">
-                <BellIcon className="w-8 h-8 text-dark-500 mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">No bookings found</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-dark-700/50">
-                {filtered.map((b) => {
-                  const cc = CARRIER_COLORS[b.carrier] || "#e8001d";
-                  return (
-                    <div
-                      key={b.id}
-                      className="flex items-center gap-4 px-4 py-3 hover:bg-dark-800/50 transition-all"
-                    >
-                      {/* Carrier dot */}
-                      <div
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: cc }}
-                      />
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p
-                            className="text-xs font-mono font-bold truncate"
-                            style={{ color: cc }}
-                          >
-                            {b.tracking_number}
-                          </p>
-                          <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
-                              b.booking_type === "B2B"
-                                ? "bg-purple-500/15 text-purple-400"
-                                : "bg-pink-500/15 text-pink-400"
-                            }`}
-                          >
-                            {b.booking_type}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {b.receiver_name} · {b.receiver_city}
-                          {b.receiver_phone
-                            ? ` · 📱${b.receiver_phone}`
-                            : " · ⚠ No phone"}
-                        </p>
-                      </div>
-
-                      {/* Current status */}
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[10px] text-slate-500 font-mono">
-                          {b.status}
-                        </p>
-                        <p className="text-[9px] text-slate-600">{b.carrier}</p>
-                      </div>
-
-                      {/* Action */}
-                      <button
-                        onClick={() => setSelected(b)}
-                        className="btn-primary text-[10px] px-3 py-1.5 flex-shrink-0 gap-1"
-                      >
-                        <PaperAirplaneIcon className="w-3 h-3" />
-                        Notify
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Setup guide */}
-          <div className="card p-5">
-            <p className="font-mono text-[9px] text-slate-500 uppercase tracking-wider mb-4">
-              Setup Guide
-            </p>
-            <div className="space-y-3">
-              {[
-                {
-                  step: "1",
-                  title: "Install Twilio",
-                  cmd: "pip install twilio",
-                  desc: "For SMS and WhatsApp notifications",
-                  color: "#e8001d",
-                },
-                {
-                  step: "2",
-                  title: "Get Twilio Credentials",
-                  cmd: "twilio.com/console → Account SID + Auth Token",
-                  desc: "Free trial gives ₹1,100 credit to start",
-                  color: "#f97316",
-                },
-                {
-                  step: "3",
-                  title: "WhatsApp Sandbox",
-                  cmd: "twilio.com/console/messaging/whatsapp/sandbox",
-                  desc: "Customer sends 'join [word]' once to opt in",
-                  color: "#22c55e",
-                },
-                {
-                  step: "4",
-                  title: "Gmail SMTP",
-                  cmd: "Google Account → App Passwords → Generate",
-                  desc: "Use App Password (not main Gmail password)",
-                  color: "#60a5fa",
-                },
-                {
-                  step: "5",
-                  title: "Add to notifications_backend.py",
-                  cmd: "Set TWILIO_* and SMTP_* variables at top",
-                  desc: "Restart backend — notifications go live",
-                  color: "#a78bfa",
-                },
-              ].map(({ step, title, cmd, desc, color }) => (
-                <div key={step} className="flex gap-3">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5"
                     style={{
-                      background: `${color}20`,
-                      color,
-                      border: `1px solid ${color}40`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 8,
                     }}
                   >
-                    {step}
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: n.is_read ? "#94a3b8" : "#f1f5f9",
+                      }}
+                    >
+                      {n.title}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {!n.is_read && (
+                        <div
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            background: st.color,
+                          }}
+                        />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotif(n.id);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#475569",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold">{title}</p>
-                    <p className="text-[10px] font-mono text-slate-400 mt-0.5 bg-dark-800 px-2 py-1 rounded border border-dark-600 inline-block">
-                      {cmd}
-                    </p>
-                    <p className="text-[9px] text-slate-600 mt-1">{desc}</p>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+                    {n.message}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        background: "#1e293b",
+                        color: "#64748b",
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                      }}
+                    >
+                      {CAT_ICONS[n.category]} {n.category}
+                    </span>
+                    <span
+                      style={{
+                        background: st.bg,
+                        color: st.color,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {n.type}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "#334155",
+                        marginLeft: "auto",
+                      }}
+                    >
+                      {new Date(n.created_at).toLocaleString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
                   </div>
                 </div>
-              ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create modal */}
+      {showCreate && (
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "20px 24px",
+                borderBottom: "1px solid #1e293b",
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+                New Notification
+              </h2>
+              <button
+                onClick={() => setShowCreate(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  fontSize: 18,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              style={{
+                padding: 24,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              <div>
+                <label style={s.label}>Title</label>
+                <input
+                  style={s.input}
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, title: e.target.value }))
+                  }
+                  placeholder="Notification title"
+                />
+              </div>
+              <div>
+                <label style={s.label}>Message</label>
+                <textarea
+                  style={{ ...s.input, height: 80, resize: "vertical" }}
+                  value={form.message}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, message: e.target.value }))
+                  }
+                  placeholder="Notification message"
+                />
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 14,
+                }}
+              >
+                <div>
+                  <label style={s.label}>Type</label>
+                  <select
+                    style={s.input}
+                    value={form.type}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, type: e.target.value }))
+                    }
+                  >
+                    {["info", "success", "warning", "error"].map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={s.label}>Category</label>
+                  <select
+                    style={s.input}
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, category: e.target.value }))
+                    }
+                  >
+                    {["system", "shipment", "booking", "driver", "invoice"].map(
+                      (c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                  marginTop: 4,
+                }}
+              >
+                <button style={s.btnGhost} onClick={() => setShowCreate(false)}>
+                  Cancel
+                </button>
+                <button style={s.btnPrimary} onClick={createNotification}>
+                  Create
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Send modal */}
-      <AnimatePresence>
-        {selected && (
-          <SendModal
-            booking={selected}
-            channels={channels}
-            onClose={() => setSelected(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Toast */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            background: toast.type === "error" ? "#7f1d1d" : "#14532d",
+            color: "#fff",
+            padding: "12px 20px",
+            borderRadius: 10,
+            fontWeight: 600,
+            fontSize: 14,
+            zIndex: 2000,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }
+
+const s = {
+  page: {
+    padding: "28px 32px",
+    background: "#020617",
+    minHeight: "100vh",
+    color: "#e2e8f0",
+    fontFamily: "'DM Sans','Segoe UI',sans-serif",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  title: {
+    margin: "0 0 4px",
+    fontSize: 26,
+    fontWeight: 700,
+    color: "#f1f5f9",
+    letterSpacing: "-0.5px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  badge: {
+    background: "#ef4444",
+    color: "#fff",
+    borderRadius: 20,
+    padding: "2px 10px",
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  sub: { margin: 0, color: "#64748b", fontSize: 14 },
+  btnPrimary: {
+    background: "linear-gradient(135deg,#3b82f6,#2563eb)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "9px 18px",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 13,
+  },
+  btnGhost: {
+    background: "transparent",
+    color: "#94a3b8",
+    border: "1px solid #1e293b",
+    borderRadius: 8,
+    padding: "9px 18px",
+    cursor: "pointer",
+    fontSize: 13,
+  },
+  filterBtn: {
+    background: "#0f172a",
+    border: "1px solid #1e293b",
+    color: "#64748b",
+    borderRadius: 20,
+    padding: "6px 14px",
+    cursor: "pointer",
+    fontSize: 13,
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  filterActive: {
+    background: "#1e293b",
+    color: "#e2e8f0",
+    fontWeight: 600,
+    borderColor: "#334155",
+  },
+  loadWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    minHeight: "40vh",
+  },
+  spin: {
+    width: 20,
+    height: 20,
+    border: "2px solid #1e293b",
+    borderTopColor: "#3b82f6",
+    borderRadius: "50%",
+    animation: "spin 0.7s linear infinite",
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "80px 24px",
+    color: "#475569",
+  },
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.7)",
+    backdropFilter: "blur(4px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: 16,
+  },
+  modal: {
+    background: "#0f172a",
+    border: "1px solid #1e293b",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 480,
+  },
+  label: {
+    display: "block",
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 600,
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  input: {
+    width: "100%",
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    padding: "10px 12px",
+    color: "#e2e8f0",
+    fontSize: 14,
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+  },
+};
