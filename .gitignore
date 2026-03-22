@@ -18,3 +18,9 @@ build/
 
 # Docker
 *.tar
+
+# Project specific
+Backend/venv/
+Frontend/node_modules/
+customer-app/node_modules/
+driver-app/node_modules/
