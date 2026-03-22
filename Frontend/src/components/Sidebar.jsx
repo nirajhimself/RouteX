@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Squares2X2Icon,
@@ -43,7 +43,6 @@ const NAV = [
     icon: ClipboardDocumentListIcon,
     group: "main",
   },
-  // ✅ Invoices added here with correct group and Heroicon
   {
     path: "/invoices",
     label: "Invoices",
@@ -75,12 +74,9 @@ const NAV = [
 ];
 
 export default function Sidebar({ open, onClose }) {
-  const location = useLocation();
-
   const Content = () => (
     <div className="flex flex-col h-full py-4">
-      {/* Logo */}
-      <div className="px-4 mb-6 flex items-center justify-between">
+      <div className="px-4 mb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-0 select-none">
           <span
             className="font-display text-2xl font-bold text-slate-100 leading-none"
@@ -107,15 +103,17 @@ export default function Sidebar({ open, onClose }) {
         </button>
       </div>
 
-      {/* Operations */}
-      <div className="px-2 mb-2">
+      <div
+        className="flex-1 overflow-y-auto px-2"
+        style={{ scrollbarWidth: "none" }}
+      >
         <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 uppercase mb-1.5 font-mono">
           Operations
         </p>
         {NAV.filter((n) => n.group === "main").map(
           ({ path, label, icon: Icon }) => (
             <NavLink
-              key={path}
+              key={path + label}
               to={path}
               end={path === "/"}
               onClick={onClose}
@@ -128,17 +126,14 @@ export default function Sidebar({ open, onClose }) {
             </NavLink>
           ),
         )}
-      </div>
 
-      {/* Intelligence */}
-      <div className="px-2">
-        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 uppercase mb-1.5 font-mono">
+        <p className="px-2 text-[10px] font-semibold tracking-widest text-slate-600 uppercase mb-1.5 mt-3 font-mono">
           Intelligence
         </p>
         {NAV.filter((n) => n.group === "ops").map(
           ({ path, label, icon: Icon }) => (
             <NavLink
-              key={path}
+              key={path + label}
               to={path}
               onClick={onClose}
               className={({ isActive }) =>
@@ -152,8 +147,7 @@ export default function Sidebar({ open, onClose }) {
         )}
       </div>
 
-      {/* Footer */}
-      <div className="mt-auto px-4 pt-4 border-t border-dark-500">
+      <div className="flex-shrink-0 px-4 pt-4 border-t border-dark-500">
         <div className="bg-dark-700 rounded-lg p-3 border border-dark-500">
           <p className="text-[10px] font-mono text-slate-500 mb-2 uppercase tracking-wider">
             System
@@ -178,12 +172,9 @@ export default function Sidebar({ open, onClose }) {
 
   return (
     <>
-      {/* Desktop */}
       <aside className="hidden lg:flex flex-col w-52 bg-dark-900 border-r border-dark-600 fixed top-0 left-0 bottom-0 z-30">
         <Content />
       </aside>
-
-      {/* Mobile overlay */}
       <AnimatePresence>
         {open && (
           <>

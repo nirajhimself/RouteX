@@ -66,7 +66,6 @@ export default function Invoices() {
     try {
       const r = await fetch(`${API}/invoices`);
       const data = await r.json();
-      // Always ensure we set an array, even if backend returns error object
       setInvoices(Array.isArray(data) ? data : []);
     } catch {
       showToast("Failed to load invoices", "error");
@@ -206,12 +205,12 @@ export default function Invoices() {
   const { subtotal, tax, total } = calcTotals(form.items, form.tax_rate);
 
   return (
-    <div style={styles.page}>
+    <div style={s.page}>
       {/* Toast */}
       {toast && (
         <div
           style={{
-            ...styles.toast,
+            ...s.toast,
             background: toast.type === "error" ? "#7f1d1d" : "#14532d",
           }}
         >
@@ -221,20 +220,20 @@ export default function Invoices() {
       )}
 
       {/* Header */}
-      <div style={styles.header}>
+      <div style={s.header}>
         <div>
-          <h1 style={styles.title}>Invoice & Billing</h1>
-          <p style={styles.subtitle}>
+          <h1 style={s.title}>Invoice & Billing</h1>
+          <p style={s.subtitle}>
             Manage client invoices, payments & billing records
           </p>
         </div>
-        <button style={styles.btnPrimary} onClick={openCreate}>
+        <button style={s.btnPrimary} onClick={openCreate}>
           + New Invoice
         </button>
       </div>
 
       {/* Stats */}
-      <div style={styles.statsRow}>
+      <div style={s.statsRow}>
         {[
           {
             label: "Total Invoices",
@@ -260,53 +259,53 @@ export default function Invoices() {
             icon: "🚨",
             color: "#f87171",
           },
-        ].map((s) => (
-          <div key={s.label} style={styles.statCard}>
-            <span style={{ fontSize: 24 }}>{s.icon}</span>
+        ].map((st) => (
+          <div key={st.label} style={s.statCard}>
+            <span style={{ fontSize: 24 }}>{st.icon}</span>
             <div>
-              <div style={{ ...styles.statValue, color: s.color }}>
-                {s.value}
-              </div>
-              <div style={styles.statLabel}>{s.label}</div>
+              <div style={{ ...s.statValue, color: st.color }}>{st.value}</div>
+              <div style={s.statLabel}>{st.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div style={styles.filterRow}>
+      <div style={s.filterRow}>
         <input
           placeholder="Search by client or invoice #..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={styles.searchInput}
+          style={s.searchInput}
         />
-        <div style={styles.tabs}>
-          {["all", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              style={{
-                ...styles.tab,
-                ...(filterStatus === s ? styles.tabActive : {}),
-              }}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
+        <div style={s.tabs}>
+          {["all", "draft", "sent", "paid", "overdue", "cancelled"].map(
+            (st) => (
+              <button
+                key={st}
+                onClick={() => setFilterStatus(st)}
+                style={{
+                  ...s.tab,
+                  ...(filterStatus === st ? s.tabActive : {}),
+                }}
+              >
+                {st.charAt(0).toUpperCase() + st.slice(1)}
+              </button>
+            ),
+          )}
         </div>
       </div>
 
       {/* Table */}
-      <div style={styles.tableWrap}>
+      <div style={s.tableWrap}>
         {loading ? (
-          <div style={styles.empty}>Loading invoices…</div>
+          <div style={s.empty}>Loading invoices…</div>
         ) : filtered.length === 0 ? (
-          <div style={styles.empty}>
+          <div style={s.empty}>
             No invoices found. Create your first invoice!
           </div>
         ) : (
-          <table style={styles.table}>
+          <table style={s.table}>
             <thead>
               <tr>
                 {[
@@ -318,7 +317,7 @@ export default function Invoices() {
                   "Status",
                   "Actions",
                 ].map((h) => (
-                  <th key={h} style={styles.th}>
+                  <th key={h} style={s.th}>
                     {h}
                   </th>
                 ))}
@@ -330,7 +329,7 @@ export default function Invoices() {
                 return (
                   <tr
                     key={inv.id}
-                    style={styles.tr}
+                    style={s.tr}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background = "#1e293b")
                     }
@@ -340,8 +339,8 @@ export default function Invoices() {
                   >
                     <td
                       style={{
-                        ...styles.td,
-                        color: "#60a5fa",
+                        ...s.td,
+                        color: "#e8001d",
                         fontWeight: 700,
                         cursor: "pointer",
                       }}
@@ -349,25 +348,25 @@ export default function Invoices() {
                     >
                       {inv.invoice_number}
                     </td>
-                    <td style={styles.td}>
+                    <td style={s.td}>
                       <div style={{ fontWeight: 600 }}>{inv.client_name}</div>
                       <div style={{ color: "#64748b", fontSize: 12 }}>
                         {inv.client_email}
                       </div>
                     </td>
-                    <td style={styles.td}>{inv.issue_date}</td>
+                    <td style={s.td}>{inv.issue_date}</td>
                     <td
                       style={{
-                        ...styles.td,
+                        ...s.td,
                         color: inv.status === "overdue" ? "#f87171" : "inherit",
                       }}
                     >
                       {inv.due_date}
                     </td>
-                    <td style={{ ...styles.td, fontWeight: 700 }}>
+                    <td style={{ ...s.td, fontWeight: 700 }}>
                       {formatCurrency(inv.total)}
                     </td>
-                    <td style={styles.td}>
+                    <td style={s.td}>
                       <span
                         style={{
                           background: st.bg,
@@ -381,23 +380,20 @@ export default function Invoices() {
                         {st.label}
                       </span>
                     </td>
-                    <td style={styles.td}>
+                    <td style={s.td}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
-                          style={styles.btnSm}
+                          style={s.btnSm}
                           onClick={() => setViewInvoice(inv)}
                         >
                           View
                         </button>
-                        <button
-                          style={styles.btnSm}
-                          onClick={() => openEdit(inv)}
-                        >
+                        <button style={s.btnSm} onClick={() => openEdit(inv)}>
                           Edit
                         </button>
                         <button
                           style={{
-                            ...styles.btnSm,
+                            ...s.btnSm,
                             color: "#f87171",
                             borderColor: "#7f1d1d",
                           }}
@@ -415,85 +411,82 @@ export default function Invoices() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create / Edit Modal */}
       {showModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div style={s.modalHeader}>
               <h2 style={{ margin: 0, fontSize: 20 }}>
                 {editId ? "Edit Invoice" : "Create Invoice"}
               </h2>
-              <button
-                style={styles.closeBtn}
-                onClick={() => setShowModal(false)}
-              >
+              <button style={s.closeBtn} onClick={() => setShowModal(false)}>
                 ✕
               </button>
             </div>
-            <div style={styles.modalBody}>
-              <div style={styles.grid2}>
-                <div style={styles.field}>
-                  <label style={styles.label}>Invoice Number *</label>
+            <div style={s.modalBody}>
+              <div style={s.grid2}>
+                <div style={s.field}>
+                  <label style={s.label}>Invoice Number *</label>
                   <input
-                    style={styles.input}
+                    style={s.input}
                     value={form.invoice_number}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, invoice_number: e.target.value }))
                     }
                   />
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Status</label>
+                <div style={s.field}>
+                  <label style={s.label}>Status</label>
                   <select
-                    style={styles.input}
+                    style={s.input}
                     value={form.status}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, status: e.target.value }))
                     }
                   >
-                    {Object.keys(STATUS_STYLES).map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_STYLES[s].label}
+                    {Object.keys(STATUS_STYLES).map((st) => (
+                      <option key={st} value={st}>
+                        {STATUS_STYLES[st].label}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Client Name *</label>
+                <div style={s.field}>
+                  <label style={s.label}>Client Name *</label>
                   <input
-                    style={styles.input}
+                    style={s.input}
                     value={form.client_name}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, client_name: e.target.value }))
                     }
                   />
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Client Email</label>
+                <div style={s.field}>
+                  <label style={s.label}>Client Email</label>
                   <input
-                    style={styles.input}
+                    style={s.input}
                     value={form.client_email}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, client_email: e.target.value }))
                     }
                   />
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Issue Date</label>
+                <div style={s.field}>
+                  <label style={s.label}>Issue Date</label>
                   <input
                     type="date"
-                    style={styles.input}
+                    style={s.input}
                     value={form.issue_date}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, issue_date: e.target.value }))
                     }
                   />
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Due Date</label>
+                <div style={s.field}>
+                  <label style={s.label}>Due Date</label>
                   <input
                     type="date"
-                    style={styles.input}
+                    style={s.input}
                     value={form.due_date}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, due_date: e.target.value }))
@@ -501,10 +494,10 @@ export default function Invoices() {
                   />
                 </div>
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Client Address</label>
+              <div style={s.field}>
+                <label style={s.label}>Client Address</label>
                 <input
-                  style={styles.input}
+                  style={s.input}
                   value={form.client_address}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, client_address: e.target.value }))
@@ -522,10 +515,8 @@ export default function Invoices() {
                     marginBottom: 8,
                   }}
                 >
-                  <label style={{ ...styles.label, margin: 0 }}>
-                    Line Items
-                  </label>
-                  <button style={styles.btnSm} onClick={addItem}>
+                  <label style={{ ...s.label, margin: 0 }}>Line Items</label>
+                  <button style={s.btnSm} onClick={addItem}>
                     + Add Item
                   </button>
                 </div>
@@ -546,10 +537,7 @@ export default function Invoices() {
                           "Total",
                           "",
                         ].map((h) => (
-                          <th
-                            key={h}
-                            style={{ ...styles.th, padding: "8px 12px" }}
-                          >
+                          <th key={h} style={{ ...s.th, padding: "8px 12px" }}>
                             {h}
                           </th>
                         ))}
@@ -563,7 +551,7 @@ export default function Invoices() {
                         >
                           <td style={{ padding: "6px 8px" }}>
                             <input
-                              style={{ ...styles.input, margin: 0 }}
+                              style={{ ...s.input, margin: 0 }}
                               value={item.description}
                               onChange={(e) =>
                                 setItem(idx, "description", e.target.value)
@@ -574,7 +562,7 @@ export default function Invoices() {
                           <td style={{ padding: "6px 8px", width: 70 }}>
                             <input
                               type="number"
-                              style={{ ...styles.input, margin: 0 }}
+                              style={{ ...s.input, margin: 0 }}
                               value={item.quantity}
                               onChange={(e) =>
                                 setItem(idx, "quantity", e.target.value)
@@ -584,7 +572,7 @@ export default function Invoices() {
                           <td style={{ padding: "6px 8px", width: 130 }}>
                             <input
                               type="number"
-                              style={{ ...styles.input, margin: 0 }}
+                              style={{ ...s.input, margin: 0 }}
                               value={item.unit_price}
                               onChange={(e) =>
                                 setItem(idx, "unit_price", e.target.value)
@@ -641,7 +629,7 @@ export default function Invoices() {
                     padding: 16,
                   }}
                 >
-                  <div style={styles.totalRow}>
+                  <div style={s.totalRow}>
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
@@ -659,7 +647,7 @@ export default function Invoices() {
                     <input
                       type="number"
                       style={{
-                        ...styles.input,
+                        ...s.input,
                         width: 70,
                         margin: 0,
                         padding: "4px 8px",
@@ -678,7 +666,7 @@ export default function Invoices() {
                   </div>
                   <div
                     style={{
-                      ...styles.totalRow,
+                      ...s.totalRow,
                       color: "#4ade80",
                       fontWeight: 700,
                       fontSize: 16,
@@ -692,10 +680,10 @@ export default function Invoices() {
                 </div>
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Notes</label>
+              <div style={s.field}>
+                <label style={s.label}>Notes</label>
                 <textarea
-                  style={{ ...styles.input, height: 70, resize: "vertical" }}
+                  style={{ ...s.input, height: 70, resize: "vertical" }}
                   value={form.notes}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, notes: e.target.value }))
@@ -704,14 +692,14 @@ export default function Invoices() {
                 />
               </div>
             </div>
-            <div style={styles.modalFooter}>
+            <div style={s.modalFooter}>
               <button
-                style={styles.btnSecondary}
+                style={s.btnSecondary}
                 onClick={() => setShowModal(false)}
               >
                 Cancel
               </button>
-              <button style={styles.btnPrimary} onClick={handleSubmit}>
+              <button style={s.btnPrimary} onClick={handleSubmit}>
                 {editId ? "Save Changes" : "Create Invoice"}
               </button>
             </div>
@@ -721,9 +709,9 @@ export default function Invoices() {
 
       {/* View Modal */}
       {viewInvoice && (
-        <div style={styles.overlay}>
-          <div style={{ ...styles.modal, maxWidth: 680 }}>
-            <div style={styles.modalHeader}>
+        <div style={s.overlay}>
+          <div style={{ ...s.modal, maxWidth: 680 }}>
+            <div style={s.modalHeader}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 20 }}>
                   {viewInvoice.invoice_number}
@@ -741,17 +729,14 @@ export default function Invoices() {
                   {STATUS_STYLES[viewInvoice.status]?.label}
                 </span>
               </div>
-              <button
-                style={styles.closeBtn}
-                onClick={() => setViewInvoice(null)}
-              >
+              <button style={s.closeBtn} onClick={() => setViewInvoice(null)}>
                 ✕
               </button>
             </div>
-            <div style={styles.modalBody}>
-              <div style={styles.grid2}>
+            <div style={s.modalBody}>
+              <div style={s.grid2}>
                 <div>
-                  <div style={styles.label}>Client</div>
+                  <div style={s.label}>Client</div>
                   <div style={{ fontWeight: 600 }}>
                     {viewInvoice.client_name}
                   </div>
@@ -760,7 +745,7 @@ export default function Invoices() {
                   </div>
                 </div>
                 <div>
-                  <div style={styles.label}>Dates</div>
+                  <div style={s.label}>Dates</div>
                   <div style={{ fontSize: 13 }}>
                     Issued: {viewInvoice.issue_date}
                   </div>
@@ -774,11 +759,11 @@ export default function Invoices() {
                   {viewInvoice.client_address}
                 </div>
               )}
-              <table style={{ ...styles.table, marginTop: 20 }}>
+              <table style={{ ...s.table, marginTop: 20 }}>
                 <thead>
                   <tr>
                     {["Description", "Qty", "Unit Price", "Total"].map((h) => (
-                      <th key={h} style={styles.th}>
+                      <th key={h} style={s.th}>
                         {h}
                       </th>
                     ))}
@@ -786,13 +771,11 @@ export default function Invoices() {
                 </thead>
                 <tbody>
                   {(viewInvoice.items || []).map((item, i) => (
-                    <tr key={i} style={styles.tr}>
-                      <td style={styles.td}>{item.description}</td>
-                      <td style={styles.td}>{item.quantity}</td>
-                      <td style={styles.td}>
-                        {formatCurrency(item.unit_price)}
-                      </td>
-                      <td style={{ ...styles.td, fontWeight: 600 }}>
+                    <tr key={i} style={s.tr}>
+                      <td style={s.td}>{item.description}</td>
+                      <td style={s.td}>{item.quantity}</td>
+                      <td style={s.td}>{formatCurrency(item.unit_price)}</td>
+                      <td style={{ ...s.td, fontWeight: 600 }}>
                         {formatCurrency(item.quantity * item.unit_price)}
                       </td>
                     </tr>
@@ -814,17 +797,17 @@ export default function Invoices() {
                     padding: 14,
                   }}
                 >
-                  <div style={styles.totalRow}>
+                  <div style={s.totalRow}>
                     <span>Subtotal</span>
                     <span>{formatCurrency(viewInvoice.subtotal)}</span>
                   </div>
-                  <div style={styles.totalRow}>
+                  <div style={s.totalRow}>
                     <span>Tax ({viewInvoice.tax_rate}%)</span>
                     <span>{formatCurrency(viewInvoice.tax)}</span>
                   </div>
                   <div
                     style={{
-                      ...styles.totalRow,
+                      ...s.totalRow,
                       color: "#4ade80",
                       fontWeight: 700,
                       fontSize: 16,
@@ -851,34 +834,32 @@ export default function Invoices() {
                   {viewInvoice.notes}
                 </div>
               )}
-
-              {/* Quick Status Update */}
               <div style={{ marginTop: 20 }}>
-                <div style={styles.label}>Update Status</div>
+                <div style={s.label}>Update Status</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {Object.keys(STATUS_STYLES)
-                    .filter((s) => s !== viewInvoice.status)
-                    .map((s) => (
+                    .filter((st) => st !== viewInvoice.status)
+                    .map((st) => (
                       <button
-                        key={s}
+                        key={st}
                         style={{
-                          ...styles.btnSm,
-                          background: STATUS_STYLES[s].bg,
-                          color: STATUS_STYLES[s].color,
-                          borderColor: STATUS_STYLES[s].color + "44",
+                          ...s.btnSm,
+                          background: STATUS_STYLES[st].bg,
+                          color: STATUS_STYLES[st].color,
+                          borderColor: STATUS_STYLES[st].color + "44",
                         }}
-                        onClick={() => updateStatus(viewInvoice.id, s)}
+                        onClick={() => updateStatus(viewInvoice.id, st)}
                       >
-                        Mark {STATUS_STYLES[s].label}
+                        Mark {STATUS_STYLES[st].label}
                       </button>
                     ))}
                 </div>
               </div>
             </div>
-            <div style={styles.modalFooter}>
+            <div style={s.modalFooter}>
               <button
                 style={{
-                  ...styles.btnSecondary,
+                  ...s.btnSecondary,
                   color: "#f87171",
                   borderColor: "#7f1d1d",
                 }}
@@ -890,7 +871,7 @@ export default function Invoices() {
                 Delete
               </button>
               <button
-                style={styles.btnSm}
+                style={s.btnSm}
                 onClick={() => {
                   openEdit(viewInvoice);
                   setViewInvoice(null);
@@ -899,7 +880,7 @@ export default function Invoices() {
                 Edit Invoice
               </button>
               <button
-                style={styles.btnSecondary}
+                style={s.btnSecondary}
                 onClick={() => setViewInvoice(null)}
               >
                 Close
@@ -911,7 +892,7 @@ export default function Invoices() {
 
       {/* Delete Confirm */}
       {deleteConfirm && (
-        <div style={styles.overlay}>
+        <div style={s.overlay}>
           <div
             style={{
               background: "#0f172a",
@@ -932,13 +913,13 @@ export default function Invoices() {
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <button
-                style={styles.btnSecondary}
+                style={s.btnSecondary}
                 onClick={() => setDeleteConfirm(null)}
               >
                 Cancel
               </button>
               <button
-                style={{ ...styles.btnPrimary, background: "#7f1d1d" }}
+                style={{ ...s.btnPrimary, background: "#7f1d1d" }}
                 onClick={() => handleDelete(deleteConfirm)}
               >
                 Delete
@@ -951,13 +932,13 @@ export default function Invoices() {
   );
 }
 
-const styles = {
+const s = {
   page: {
     padding: "28px 32px",
     background: "#020617",
     minHeight: "100vh",
     color: "#e2e8f0",
-    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+    fontFamily: "'DM Sans','Segoe UI',sans-serif",
   },
   header: {
     display: "flex",
@@ -974,7 +955,7 @@ const styles = {
   },
   subtitle: { margin: 0, color: "#64748b", fontSize: 14 },
   btnPrimary: {
-    background: "linear-gradient(135deg,#3b82f6,#2563eb)",
+    background: "#e8001d",
     color: "#fff",
     border: "none",
     borderRadius: 8,
@@ -1004,7 +985,7 @@ const styles = {
   },
   statsRow: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(4,1fr)",
     gap: 16,
     marginBottom: 24,
   },
@@ -1054,7 +1035,7 @@ const styles = {
     fontSize: 13,
     transition: "all 0.15s",
   },
-  tabActive: { background: "#1e293b", color: "#e2e8f0", fontWeight: 600 },
+  tabActive: { background: "#e8001d", color: "#fff", fontWeight: 600 },
   tableWrap: {
     background: "#0f172a",
     border: "1px solid #1e293b",
