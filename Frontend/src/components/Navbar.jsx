@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { COMPANY_ID, API_BASE } from "../config";
 
-const API = API_BASE || "http://localhost:8000";
+const API = API_BASE || import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function LiveClock() {
   const [time, setTime] = useState(new Date());

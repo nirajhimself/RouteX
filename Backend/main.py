@@ -16,14 +16,16 @@ app = FastAPI(title="RouteX AI Logistics Platform")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:4173",
-        "*",   # ✅ allows deployed frontend (replace with your frontend URL later)
-    ],
+    "https://routex-admin-sand.vercel.app",   # ✅ your actual admin URL
+    "https://routex-customer.vercel.app",      # add customer URL when you know it
+    "https://routex-driver-app.vercel.app",    # add driver URL when you know it
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:4173",
+],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
