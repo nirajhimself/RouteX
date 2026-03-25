@@ -1,45 +1,26 @@
 import axios from "axios";
 
-// ✅ Use environment variable (works for both local + production)
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
-// 🔥 Create axios instance
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "http://127.0.0.1:8000",
   timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// 🚀 Request interceptor (attach token)
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("routex-token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// 🚀 Response interceptor (handle errors globally)
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   (error) => {
-    console.error(
-      "[RouteX API ERROR]",
-      error?.response?.status,
-      error?.message,
-    );
-
-    // Optional: handle unauthorized globally
-    if (error?.response?.status === 401) {
-      localStorage.removeItem("routex-token");
-      // window.location.href = "/login"; // optional redirect
-    }
-
+    console.error("[RouteX API]", error?.response?.status, error?.message);
     return Promise.reject(error);
   },
 );

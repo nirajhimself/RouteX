@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-import API from "../config";
+const API = "http://localhost:8000";
 
 const STATUS_MAP = {
   Pending: { cls: "badge-pending", label: "Pending" },
