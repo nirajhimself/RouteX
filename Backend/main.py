@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine
-from models import Base
+from sqlalchemy.orm import Session
+
+from database import engine, SessionLocal
+from models import Base, Company
+from schemas import CompanyCreate
 
 # ── Create all DB tables ──────────────────────────────────────────────────────
 Base.metadata.create_all(bind=engine)
@@ -9,16 +12,17 @@ Base.metadata.create_all(bind=engine)
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(title="RouteX AI Logistics Platform")
 
-# ── CORS — allow all 3 frontend apps ─────────────────────────────────────────
+# ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",   # Admin Panel
-        "http://localhost:3001",   # Driver App
-        "http://localhost:3002",   # Customer App
-        "http://localhost:5173",   # Vite default
-        "http://localhost:5174",   # Vite fallback
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:5173",
+        "http://localhost:5174",
         "http://localhost:4173",
+        "*",   # ✅ allows deployed frontend (replace with your frontend URL later)
     ],
     allow_credentials=False,
     allow_methods=["*"],
@@ -54,15 +58,7 @@ app.include_router(analytics_router)
 app.include_router(heatmap_router)
 app.include_router(notifications_router)
 
-
-# ── Company (kept here — simple, no separate file needed) ────────────────────
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Company
-from schemas import CompanyCreate
-from fastapi import HTTPException
-
+# ── DB Dependency ─────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()
     try:
@@ -70,15 +66,17 @@ def get_db():
     finally:
         db.close()
 
+# ── Company ───────────────────────────────────────────────────────────────────
 @app.post("/create-company")
 def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     existing = db.query(Company).filter(Company.name == company.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Company already exists")
     new_company = Company(name=company.name)
-    db.add(new_company); db.commit(); db.refresh(new_company)
+    db.add(new_company)
+    db.commit()
+    db.refresh(new_company)
     return new_company
-
 
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/")
@@ -87,4 +85,8 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "RouteX Backend", "apps": ["admin:3000", "driver:3001", "customer:3002"]}
+    return {
+        "status": "ok",
+        "service": "RouteX Backend",
+        "apps": ["admin:3000", "driver:3001", "customer:3002"]
+    }
