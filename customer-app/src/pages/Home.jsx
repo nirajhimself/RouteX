@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const API = "http://localhost:8000";
+import API from "../config";
 
 export default function Home() {
   const { customer, loginAsGuest } = useAuth();

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-
-const API = "http://localhost:8000";
+import API from "../config";
 
 const STATUS_STEPS = [
   "Booked",

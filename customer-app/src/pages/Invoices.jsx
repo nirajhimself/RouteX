@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-
-const API = "http://localhost:8000";
+import API from "../config";
 
 const STATUS_STYLE = {
   draft: { bg: "#1e293b", color: "#94a3b8", label: "Draft" },

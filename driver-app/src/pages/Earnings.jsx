@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
-const API = "http://localhost:8000";
+import API from "../config";
 
 export default function Earnings() {
   const { driver } = useAuth();

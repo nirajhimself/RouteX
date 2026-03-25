@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const API = "http://localhost:8000";
+import API from "../config";
 
 const STEPS = ["Pending", "In Transit", "Delivered"];
 

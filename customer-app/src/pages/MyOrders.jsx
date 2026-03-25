@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const API = "http://localhost:8000";
+import API from "../config";
 const CID = "demo-company";
 
 export default function MyOrders() {

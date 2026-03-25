@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://localhost:8000";
+import API from "../config";
 const CID = "demo-company";
 
 const STEPS = ["Shipment Details", "Select Carrier", "Confirm & Book"];
