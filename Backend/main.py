@@ -16,7 +16,8 @@ app = FastAPI(title="RouteX AI Logistics Platform")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://routex-admin-sand.vercel.app"
+        "https://routex-admin-sand.vercel.app",
+        "http://localhost:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],
