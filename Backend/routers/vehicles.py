@@ -30,8 +30,8 @@ def create_vehicle(data: VehicleCreate, db: Session = Depends(get_db)):
 def get_vehicles(company_id: str, db: Session = Depends(get_db)):
     try:
         cid = int(company_id)
-        vehicles = db.query(Vehicle).filter(Vehicle.company_id == cid).all()
-        return vehicles
+        data = db.query(Vehicle).filter(Vehicle.company_id == cid).all()
+        return data
     except Exception as e:
         import traceback
         return {

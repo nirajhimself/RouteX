@@ -30,8 +30,8 @@ def create_shipment(data: ShipmentCreate, db: Session = Depends(get_db)):
 def get_shipments(company_id: str, db: Session = Depends(get_db)):
     try:
         cid = int(company_id)
-        shipments = db.query(Shipment).filter(Shipment.company_id == cid).all()
-        return shipments
+        data = db.query(Shipment).filter(Shipment.company_id == cid).all()
+        return data
     except Exception as e:
         import traceback
         return {
