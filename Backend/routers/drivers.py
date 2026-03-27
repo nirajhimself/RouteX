@@ -28,11 +28,11 @@ def create_driver(data: DriverCreate, db: Session = Depends(get_db)):
 def get_drivers(company_id: str, db: Session = Depends(get_db)):
     try:
         cid = int(company_id)
+        drivers = db.query(Driver).filter(Driver.company_id == cid).all()
+        return drivers
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    return db.query(Driver).filter(Driver.company_id == cid).all()
-
+        return {"error": str(e)}
+    
 @router.post("/driver/login")
 def driver_login(data: DriverLogin, db: Session = Depends(get_db)):
     driver = db.query(Driver).filter(Driver.name == data.name, Driver.phone == data.phone).first()
