@@ -73,8 +73,8 @@ const CARRIER_COLORS = {
 const DarkTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-dark-800 border border-dark-500 rounded-lg p-2.5 text-xs font-mono shadow-xl">
-      <p className="text-slate-400 mb-1">{label}</p>
+    <div className="bg-black/90 border border-gray-700 rounded-lg p-2.5 text-xs font-mono shadow-xl text-white">
+      <p className="text-gray-300 mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color || p.fill }}>
           {p.name}: <span className="font-bold">{p.value}</span>
