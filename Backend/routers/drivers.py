@@ -26,9 +26,12 @@ def create_driver(data: DriverCreate, db: Session = Depends(get_db)):
 
 @router.get("/drivers/{company_id}")
 def get_drivers(company_id: str, db: Session = Depends(get_db)):
-    cid = resolve_company_id(company_id, db)
-    return db.query(Driver).filter(Driver.company_id == cid).all()
+    try:
+        cid = resolve_company_id(company_id, db)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
+    return db.query(Driver).filter(Driver.company_id == cid).all()
 
 @router.post("/driver/login")
 def driver_login(data: DriverLogin, db: Session = Depends(get_db)):
