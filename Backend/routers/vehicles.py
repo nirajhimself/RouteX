@@ -28,5 +28,13 @@ def create_vehicle(data: VehicleCreate, db: Session = Depends(get_db)):
 
 @router.get("/vehicles/{company_id}")
 def get_vehicles(company_id: str, db: Session = Depends(get_db)):
-    cid = resolve_company_id(company_id, db)
-    return db.query(Vehicle).filter(Vehicle.company_id == cid).all()
+    try:
+        cid = int(company_id)
+        vehicles = db.query(Vehicle).filter(Vehicle.company_id == cid).all()
+        return vehicles
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }

@@ -28,8 +28,16 @@ def create_shipment(data: ShipmentCreate, db: Session = Depends(get_db)):
 
 @router.get("/shipments/{company_id}")
 def get_shipments(company_id: str, db: Session = Depends(get_db)):
-    cid = resolve_company_id(company_id, db)
-    return db.query(Shipment).filter(Shipment.company_id == cid).all()
+    try:
+        cid = int(company_id)
+        shipments = db.query(Shipment).filter(Shipment.company_id == cid).all()
+        return shipments
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
 
 
 @router.patch("/shipment/{shipment_id}/status")
