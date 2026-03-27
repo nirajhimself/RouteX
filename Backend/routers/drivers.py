@@ -31,7 +31,11 @@ def get_drivers(company_id: str, db: Session = Depends(get_db)):
         drivers = db.query(Driver).filter(Driver.company_id == cid).all()
         return drivers
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
     
 @router.post("/driver/login")
 def driver_login(data: DriverLogin, db: Session = Depends(get_db)):
