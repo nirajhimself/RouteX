@@ -27,7 +27,7 @@ def create_driver(data: DriverCreate, db: Session = Depends(get_db)):
 @router.get("/drivers/{company_id}")
 def get_drivers(company_id: str, db: Session = Depends(get_db)):
     try:
-        cid = resolve_company_id(company_id, db)
+        cid = int(company_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
