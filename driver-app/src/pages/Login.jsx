@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import API from "../config"; // ✅ important
 
 export default function Login() {
-  const { login } = useAuth();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -10,13 +9,39 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
     if (!name.trim()) return setError("Enter your name");
+    if (!phone.trim()) return setError("Enter phone number");
+
     setError("");
     setLoading(true);
+
     try {
-      await login(name.trim(), phone.trim());
+      const res = await fetch(`${API}/driver/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Login failed");
+      }
+
+      // ✅ Save driver info (optional)
+      localStorage.setItem("driver", JSON.stringify(data));
+
+      // ✅ Redirect (adjust route if needed)
+      window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -38,49 +63,15 @@ export default function Login() {
     >
       {/* Logo */}
       <div style={{ marginBottom: 40, textAlign: "center" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 0,
-            marginBottom: 8,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'Syne', 'Barlow', sans-serif",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "#f1f5f9",
-              letterSpacing: -1,
-            }}
-          >
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <span style={{ fontSize: 32, fontWeight: 800, color: "#f1f5f9" }}>
             Route
           </span>
-          <span
-            style={{
-              fontFamily: "'Syne', 'Barlow', sans-serif",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "#e8001d",
-              letterSpacing: -1,
-            }}
-          >
+          <span style={{ fontSize: 32, fontWeight: 800, color: "#e8001d" }}>
             X
           </span>
         </div>
-        <p
-          style={{
-            color: "#475569",
-            fontSize: 13,
-            fontWeight: 500,
-            letterSpacing: "0.12em",
-            fontFamily: "monospace",
-          }}
-        >
-          // Driver Portal
-        </p>
+        <p style={{ color: "#475569", fontSize: 13 }}>// Driver Portal</p>
       </div>
 
       {/* Card */}
@@ -93,133 +84,31 @@ export default function Login() {
           width: "100%",
         }}
       >
-        <h2
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: "#f1f5f9",
-            marginBottom: 6,
-          }}
-        >
-          Driver Login
-        </h2>
-        <p
-          style={{
-            color: "#475569",
-            fontSize: 14,
-            marginBottom: 24,
-            fontFamily: "monospace",
-          }}
-        >
+        <h2 style={{ color: "#f1f5f9" }}>Driver Login</h2>
+        <p style={{ color: "#475569", marginBottom: 20 }}>
           Sign in to see your deliveries
         </p>
 
-        <form
-          onSubmit={handleLogin}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
-        >
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#64748b",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: 8,
-              }}
-            >
-              Your Name
-            </label>
-            <input
-              className="input"
-              placeholder="e.g. Rahul Sharma"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#64748b",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: 8,
-              }}
-            >
-              Phone Number
-            </label>
-            <input
-              className="input"
-              placeholder="e.g. 9876543210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              type="tel"
-              autoComplete="tel"
-            />
-          </div>
+        <form onSubmit={handleLogin}>
+          <input
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          {error && (
-            <div
-              style={{
-                background: "#1f0a0a",
-                border: "1px solid #7f1d1d",
-                borderRadius: 10,
-                padding: "12px 16px",
-                color: "#f87171",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              {error}
-            </div>
-          )}
+          <input
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
 
-          <button
-            className="btn btn-primary"
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 4,
-              height: 50,
-              fontSize: 15,
-              letterSpacing: "0.03em",
-              borderRadius: 10,
-            }}
-          >
-            {loading ? (
-              <>
-                <div
-                  className="spin"
-                  style={{ borderTopColor: "#fff", width: 16, height: 16 }}
-                />{" "}
-                Signing in...
-              </>
-            ) : (
-              "Sign In"
-            )}
+          {error && <div style={{ color: "red", marginTop: 10 }}>{error}</div>}
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </div>
-
-      <p
-        style={{
-          color: "#334155",
-          fontSize: 12,
-          textAlign: "center",
-          marginTop: 24,
-          lineHeight: 1.6,
-        }}
-      >
-        Your account is created by your company admin.
-        <br />
-        Contact them if you can't sign in.
-      </p>
     </div>
   );
 }
