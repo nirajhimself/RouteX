@@ -13,13 +13,17 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="RouteX AI Logistics Platform")
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "http://localhost:5173",
+    "https://routex-admin-sand.vercel.app",
+    "https://routex-admin-3yaiii04n-nirajhimselfs-projects.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-    "https://your-admin.vercel.app",
-    "https://your-driver.vercel.app",
-    "https://your-customer.vercel.app"
-    ],
+    allow_origins=origins,  # or ["*"] for testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
