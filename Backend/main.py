@@ -5,16 +5,19 @@ from sqlalchemy.orm import Session
 from database import engine, SessionLocal
 from models import Base, Company
 from schemas import CompanyCreate
-
+from contextlib import asynccontextmanager
 # ── Create all DB tables ──────────────────────────────────────────────────────
-try:
-    Base.metadata.create_all(bind=engine)
-    print("✅ Database tables ready")
-except Exception as e:
-    print(f"⚠️ DB init warning: {e}")
+@asynccontextmanager
+async def lifespan(app):
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables ready")
+    except Exception as e:
+        print(f"⚠️ DB init warning: {e}")
+    yield
 
 # ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(title="RouteX AI Logistics Platform")
+app = FastAPI(title="RouteX AI Logistics Platform", lifespan=lifespan)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 from fastapi.middleware.cors import CORSMiddleware
