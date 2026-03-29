@@ -7,7 +7,11 @@ from models import Base, Company
 from schemas import CompanyCreate
 
 # ── Create all DB tables ──────────────────────────────────────────────────────
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✅ Database tables ready")
+except Exception as e:
+    print(f"⚠️ DB init warning: {e}")
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(title="RouteX AI Logistics Platform")
