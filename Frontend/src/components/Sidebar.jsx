@@ -49,6 +49,12 @@ const NAV = [
     icon: DocumentTextIcon,
     group: "main",
   },
+  {
+    path: "/invoice-generator",
+    label: "Generate Invoice",
+    icon: DocumentTextIcon,
+    group: "main",
+  },
   { path: "/routes", label: "Routes", icon: MapIcon, group: "ops" },
   { path: "/tracking", label: "Tracking", icon: SignalIcon, group: "ops" },
   { path: "/analytics", label: "Analytics", icon: ChartBarIcon, group: "ops" },

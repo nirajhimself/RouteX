@@ -17,6 +17,7 @@ import Notifications from "./pages/Notifications";
 import Negotiation from "./pages/Negotiation";
 import HeatMap from "./pages/HeatMap";
 import Invoices from "./components/Invoices";
+import InvoiceGenerator from "./pages/InvoiceGenerator";
 export default function App() {
   return (
     <Routes>
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/negotiation" element={<Negotiation />} />
         <Route path="/heatmap" element={<HeatMap />} />
         <Route path="/invoices" element={<Invoices />} />
+        <Route path="/invoice-generator" element={<InvoiceGenerator />} />
       </Route>
     </Routes>
   );
