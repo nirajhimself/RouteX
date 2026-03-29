@@ -50,3 +50,4 @@ export function EmptyState({ icon, title, description }) {
     </div>
   );
 }
+ 
