@@ -19,7 +19,14 @@ def get_db():
 @router.post("/create-driver")
 def create_driver(data: DriverCreate, db: Session = Depends(get_db)):
     cid = resolve_company_id(data.company_id, db)
-    driver = Driver(company_id=cid, name=data.name, phone=data.phone, is_available=True)
+    driver = Driver(
+        company_id=cid,
+        name=data.name,
+        phone=data.phone,
+        license_number=data.license_number,  # ✅ add
+        vehicle_id=data.vehicle_id,          # ✅ add
+        is_available=True
+    )
     db.add(driver); db.commit(); db.refresh(driver)
     return driver
 

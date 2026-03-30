@@ -16,12 +16,14 @@ class Company(Base):
 
 class Driver(Base):
     __tablename__ = "drivers"
-    id           = Column(Integer, primary_key=True, index=True)
-    company_id   = Column(Integer, ForeignKey("companies.id"))
-    name         = Column(String)
-    phone        = Column(String)
-    is_available = Column(Boolean, default=True)
-    created_at   = Column(DateTime, default=datetime.utcnow)
+    id             = Column(Integer, primary_key=True, index=True)
+    company_id     = Column(Integer, ForeignKey("companies.id"))
+    name           = Column(String)
+    phone          = Column(String)
+    license_number = Column(String, nullable=True)   # ✅ add
+    vehicle_id     = Column(String, nullable=True)   # ✅ add
+    is_available   = Column(Boolean, default=True)
+    created_at     = Column(DateTime, default=datetime.utcnow)
 
 
 class Vehicle(Base):
@@ -31,6 +33,7 @@ class Vehicle(Base):
     vehicle_number = Column(String)
     vehicle_type   = Column(String)
     capacity       = Column(Float)
+    fuel_type      = Column(String, nullable=True)   # ✅ add
     is_available   = Column(Boolean, default=True)
     created_at     = Column(DateTime, default=datetime.utcnow)
 
