@@ -19,8 +19,12 @@ def get_db():
 def create_vehicle(data: VehicleCreate, db: Session = Depends(get_db)):
     cid = resolve_company_id(data.company_id, db)
     vehicle = Vehicle(
-        company_id=cid, vehicle_number=data.vehicle_number,
-        vehicle_type=data.vehicle_type, capacity=data.capacity, is_available=True
+        company_id=cid,
+        vehicle_number=data.vehicle_number,
+        vehicle_type=data.vehicle_type,
+        capacity=data.capacity,
+        fuel_type=data.fuel_type,        # ✅ add this
+        is_available=True
     )
     db.add(vehicle); db.commit(); db.refresh(vehicle)
     return vehicle
