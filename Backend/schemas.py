@@ -23,6 +23,8 @@ class DriverCreate(BaseModel):
     company_id: str
     name: str
     phone: str
+    license_number: Optional[str] = None
+    vehicle_id: Optional[str] = None
 
 class DriverLogin(BaseModel):
     name: str
