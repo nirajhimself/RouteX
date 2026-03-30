@@ -5,7 +5,7 @@ import { PageLoader, ErrorState } from "../components/Loader";
 import { vehicleService } from "../services/vehicleService";
 import { COMPANY_ID } from "../config";
 import { PlusIcon, PencilIcon, EyeIcon } from "@heroicons/react/24/outline";
-
+import { getErrorMessage } from "../utils/errorHelper";
 const STATUS_BADGE = {
   "in use": "badge-blue",
   "In Use": "badge-blue",
@@ -93,9 +93,7 @@ export default function Vehicles() {
         : (res.data?.vehicles ?? res.data?.data ?? []);
       setVehicles(list);
     } catch (err) {
-      setError(
-        err?.response?.data?.detail || err.message || "Failed to load vehicles",
-      );
+      setFormError(getErrorMessage(err, "Failed to register vehicle"));
     } finally {
       setLoading(false);
     }

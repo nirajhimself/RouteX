@@ -6,7 +6,7 @@ import { inventoryService } from "../services/inventoryService";
 import { warehouseService } from "../services/warehouseService";
 import { COMPANY_ID } from "../config";
 import { PlusIcon } from "@heroicons/react/24/outline";
-
+import { getErrorMessage } from "../utils/errorHelper";
 const STATUS_BADGE = {
   in_stock: "badge-green",
   "In Stock": "badge-green",
@@ -121,11 +121,7 @@ export default function Inventory() {
         : (res.data?.inventory ?? res.data?.items ?? res.data?.data ?? []);
       setItems(list);
     } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          err.message ||
-          "Failed to load inventory",
-      );
+      setFormError(getErrorMessage(err, "Failed to add item"));
     } finally {
       setLoading(false);
     }

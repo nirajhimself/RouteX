@@ -5,7 +5,7 @@ import { PageLoader, ErrorState } from "../components/Loader";
 import { driverService } from "../services/driverService";
 import { COMPANY_ID } from "../config";
 import { PlusIcon, PencilIcon, EyeIcon } from "@heroicons/react/24/outline";
-
+import { getErrorMessage } from "../utils/errorHelper";
 const STATUS_BADGE = {
   active: "badge-green",
   Active: "badge-green",
@@ -86,9 +86,7 @@ export default function Drivers() {
         : (res.data?.drivers ?? res.data?.data ?? []);
       setDrivers(list);
     } catch (err) {
-      setError(
-        err?.response?.data?.detail || err.message || "Failed to load drivers",
-      );
+      setError(getErrorMessage(err, "Failed to load drivers"));
     } finally {
       setLoading(false);
     }

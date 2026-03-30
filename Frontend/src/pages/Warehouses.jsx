@@ -5,7 +5,7 @@ import { PageLoader, ErrorState } from "../components/Loader";
 import { warehouseService } from "../services/warehouseService";
 import { COMPANY_ID } from "../config";
 import { PlusIcon, EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
-
+import { getErrorMessage } from "../utils/errorHelper";
 const COLS = [
   {
     key: "warehouse_id",
@@ -52,11 +52,7 @@ export default function Warehouses() {
         : (res.data?.warehouses ?? res.data?.data ?? []);
       setWarehouses(list);
     } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          err.message ||
-          "Failed to load warehouses",
-      );
+      setFormError(getErrorMessage(err, "Failed to create warehouse"));
     } finally {
       setLoading(false);
     }
