@@ -37,6 +37,7 @@ class VehicleCreate(BaseModel):
     vehicle_number: str
     vehicle_type: str
     capacity: float
+    fuel_type: Optional[str] = "Diesel"
 
 
 # ── Shipment ─────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ class WarehouseCreate(BaseModel):
     name: str
     location: str
     capacity: float
+    address: Optional[str] = None 
 
 class InventoryCreate(BaseModel):
     warehouse_id: int
