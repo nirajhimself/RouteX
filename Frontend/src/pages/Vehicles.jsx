@@ -129,7 +129,14 @@ export default function Vehicles() {
         fuel_type: "Diesel",
       });
     } catch (err) {
-      setFormError(err?.response?.data?.detail || "Failed to register vehicle");
+      const detail = err?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setFormError(detail.map((d) => d.msg || JSON.stringify(d)).join(", "));
+      } else if (typeof detail === "string") {
+        setFormError(detail);
+      } else {
+        setFormError("Failed to register vehicle");
+      }
     } finally {
       setSaving(false);
     }

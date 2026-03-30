@@ -88,7 +88,14 @@ export default function Warehouses() {
       setAddOpen(false);
       setForm({ name: "", location: "", capacity: "" });
     } catch (err) {
-      setFormError(err?.response?.data?.detail || "Failed to create warehouse");
+      const detail = err?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setFormError(detail.map((d) => d.msg || JSON.stringify(d)).join(", "));
+      } else {
+        setFormError(
+          typeof detail === "string" ? detail : "Failed to create warehouse",
+        );
+      }
     } finally {
       setSaving(false);
     }
