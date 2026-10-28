@@ -1,4 +1,10 @@
 import os
+import sys
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 

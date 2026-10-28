@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_DB: RouteX_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Ajfdjk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Ajfdjk}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - routex_pg_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     healthcheck:
@@ -22,7 +22,7 @@ services:
     container_name: routex-backend
     restart: always
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:Aashvi2018@db:5432/RouteX_db
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-Ajfdjk}@db:5432/RouteX_db
     ports:
       - "8000:8000"
     depends_on:
@@ -57,4 +57,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  routex_pg_data:

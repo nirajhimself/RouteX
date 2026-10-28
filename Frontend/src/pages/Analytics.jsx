@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_BASE as API } from "../config";
 const CID = "demo-company";
 
 const COLORS = [
