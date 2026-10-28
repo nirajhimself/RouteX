@@ -14,9 +14,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("❌ DATABASE_URL is not set in environment variables")
 
-# ── Fix: postgres:// → postgresql:// ────────────────────────────────
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# ── Fix: postgres:// / postgresql:// → postgresql+psycopg2:// ────────
+# SQLAlchemy 2.1+ defaults bare postgresql:// to psycopg (v3), which isn't installed
+for prefix in ("postgres://", "postgresql://"):
+    if DATABASE_URL.startswith(prefix):
+        DATABASE_URL = DATABASE_URL.replace(prefix, "postgresql+psycopg2://", 1)
+        break
 
 # ── Create Engine ───────────────────────────────────────────────────
 engine = create_engine(
