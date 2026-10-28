@@ -79,7 +79,7 @@ export default function Login() {
             fontFamily: "monospace",
           }}
         >
-          // Driver Portal
+          {"// Driver Portal"}
         </p>
       </div>
 
@@ -218,7 +218,7 @@ export default function Login() {
       >
         Your account is created by your company admin.
         <br />
-        Contact them if you can't sign in.
+        Contact them if you can&apos;t sign in.
       </p>
     </div>
   );

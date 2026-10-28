@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from database import SessionLocal, engine
+from database import SessionLocal
 from models import Base
 from datetime import datetime
 from typing import Optional
@@ -21,9 +21,6 @@ class Notification(Base):
     is_read    = Column(Boolean, default=False)
     link       = Column(String, nullable=True)    # optional deep-link e.g. /invoices/123
     created_at = Column(DateTime, default=datetime.utcnow)
-
-# Create the table if it doesn't exist
-Base.metadata.create_all(bind=engine)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
