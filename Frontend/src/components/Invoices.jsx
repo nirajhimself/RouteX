@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 
-import api from "../api/api";
-const { data } = await api.get("/invoices");
+import { API_BASE as API } from "../config";
 
 const STATUS_STYLES = {
   draft: { bg: "#1e293b", color: "#94a3b8", label: "Draft" },
